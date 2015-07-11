@@ -1,26 +1,9 @@
 
-# import rpc
 
-# import task_exceptions
-# import deps.ExContentLoader
-# import deps.ContentLoader
-# import deps.LibraryContentEnqueue
-# import deps.LibraryContentEnqueue
-# import deps.ExExtract
-# import deps.nameTools as nt
-# import os.path
-# import traceback
-# import string
-# import settings
-# import time
-# import pprint
-# import traceback
-# from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import scoped_session
 from sqlalchemy import Table
-# from sqlalchemy import MetaData
 
 from sqlalchemy import Column
 from sqlalchemy import Integer
@@ -36,8 +19,6 @@ from sqlalchemy.schema import UniqueConstraint
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.associationproxy import association_proxy
-# from  sqlalchemy.sql.expression import func
-# from citext import CIText
 
 # Patch in knowledge of the citext type, so it reflects properly.
 from sqlalchemy.dialects.postgresql.base import ischema_names
@@ -54,8 +35,8 @@ SQLALCHEMY_DATABASE_URI = 'postgresql://{user}:{passwd}@{host}:5432/{database}'.
 
 engine = create_engine(SQLALCHEMY_DATABASE_URI)
 SessionFactory = sessionmaker(bind=engine)
-Session = scoped_session(SessionFactory)
-session = Session()
+session = scoped_session(SessionFactory)
+# session = Session()
 Base = declarative_base()
 
 db_tags_link = Table(
@@ -151,6 +132,7 @@ class Releases(Base):
 	dlstate     = Column(Integer, nullable=False, index=True)
 	postid      = Column(Integer, nullable=False, index=True)
 
+	source      = Column(citext.CIText, nullable=False, index=True)
 
 	fsize       = Column(BigInteger)
 	score       = Column(Float)
@@ -167,6 +149,7 @@ class Releases(Base):
 	filepath    = Column(Text)
 
 	status      = Column(Text)
+	rating      = Column(Text)
 
 	tags_rel      = relationship('Tags',       secondary=lambda: db_tags_link)
 	character_rel = relationship('Characters', secondary=lambda: db_chars_link)

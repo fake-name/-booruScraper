@@ -7,7 +7,8 @@ import fetcher
 import runstate
 import concurrent.futures
 
-THREADS = 10
+THREADS = 1
+THREADS = 25
 
 def insertStartingPoints():
 
@@ -16,7 +17,7 @@ def insertStartingPoints():
 		.count()
 	if not tmp:
 		for x in range(2070000):
-			new = db.Releases(dlstate=0, postid=x)
+			new = db.Releases(dlstate=0, postid=x, source='Danbooru')
 			db.session.add(new)
 			if x % 10000 == 0:
 				print("Loop ", x, "flushing...")
@@ -38,8 +39,8 @@ def go():
 
 	executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREADS)
 	try:
-		# for x in range(THREADS):
-		for x in range(1):
+		# for x in range(2):
+		for x in range(THREADS):
 			executor.submit(fetcher.run, x)
 		executor.shutdown()
 	except KeyboardInterrupt:
