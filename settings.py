@@ -13,6 +13,6 @@ DATABASE_IP      = "10.1.1.8"
 # This determines the path mask that will be used when deduplicating
 # hentai items.
 # If you aren't running the deduper, just specify something basic, like "/"
-storeDir            = r"/media/Storage/H/Danbooru"
+storeDir            = r"/media/Storage/H/Danbooru/"
 
 

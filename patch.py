@@ -5,7 +5,12 @@ logSetup.initLogging()
 
 import danbooruFetch
 import runstate
+import settings
 import concurrent.futures
+
+import os
+import os.path
+import hashlib
 
 THREADS = 1
 THREADS = 25
@@ -34,22 +39,26 @@ def resetDlstate():
 
 
 def go():
-	insertDanbooruStartingPoints()
-	resetDlstate()
+	have = db.session.query(db.Releases)             \
+		.filter(db.Releases.filepath != None) \
+		.all()
 
-	executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREADS)
-	try:
-		# for x in range(2):
-		for x in range(THREADS):
-			executor.submit(danbooruFetch.run, x)
-		executor.shutdown()
-	except KeyboardInterrupt:
-		print("Waiting for executor.")
-		runstate.run = False
-		executor.shutdown()
+	proc = 0
+	for row in have:
+		fpath = settings.storeDir+row.filepath
+		fpath = os.path.abspath(fpath)
 
+		with open(fpath, "rb") as fp:
+			cont = fp.read()
+			fhash = hashlib.md5(cont).hexdigest()
 
 
+		print(os.path.exists(fpath), fhash, fpath)
 
+		row.file.append((fpath, fhash))
+		proc += 1
+		if proc % 50 == 0:
+			db.session.commit()
 if __name__ == '__main__':
 	go()
+

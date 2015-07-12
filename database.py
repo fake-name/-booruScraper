@@ -1,4 +1,5 @@
 
+import settings
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -60,6 +61,13 @@ db_artist_link = Table(
 		PrimaryKeyConstraint('releases_id', 'type_id')
 	)
 
+db_file_link = Table(
+		'db_file_link', Base.metadata,
+		Column('releases_id', Integer, ForeignKey('db_releases.id'), nullable=False),
+		Column('file_id',     Integer, ForeignKey('db_files.id'),     nullable=False),
+		PrimaryKeyConstraint('releases_id', 'file_id')
+	)
+
 class RawPages(Base):
 	__tablename__ = 'db_raw_pages'
 	id          = Column(Integer, primary_key = True)
@@ -99,6 +107,18 @@ class Artist(Base):
 		)
 
 
+class Files(Base):
+	__tablename__ = 'db_files'
+	id          = Column(Integer, primary_key=True)
+
+	filepath    = Column(citext.CIText(), nullable=False)
+	fhash       = Column(Text, nullable=False)
+
+	__table_args__ = (
+		UniqueConstraint('filepath'),
+		UniqueConstraint('fhash'),
+		)
+
 def tag_creator(tag):
 
 	tmp = session.query(Tags)         \
@@ -126,6 +146,22 @@ def artist_creator(artist):
 	return Artist(artist=artist)
 
 
+def file_creator(filetups):
+	filepath, fhash = filetups
+
+	# We only care about uniqueness WRT hashes.
+	tmp = session.query(Files)         \
+		.filter(Files.fhash  == fhash) \
+		.scalar()
+	if tmp:
+		return tmp
+
+	# Remove the absolute path (if needed)
+	if settings.storeDir in filepath:
+		filepath = filepath[len(settings.storeDir):]
+	return Files(filepath=filepath, fhash=fhash)
+
+
 class Releases(Base):
 	__tablename__ = 'db_releases'
 	id          = Column(Integer, primary_key=True)
@@ -145,19 +181,20 @@ class Releases(Base):
 	res_x       = Column(Integer)
 	res_y       = Column(Integer)
 
-	filename    = Column(Text)
-	filepath    = Column(Text)
 
 	status      = Column(Text)
 	rating      = Column(Text)
 
+
 	tags_rel      = relationship('Tags',       secondary=lambda: db_tags_link)
 	character_rel = relationship('Characters', secondary=lambda: db_chars_link)
 	artist_rel    = relationship('Artist',     secondary=lambda: db_artist_link)
+	file_rel      = relationship('Files',      secondary=lambda: db_file_link)
 
 	tags          = association_proxy('tags_rel',      'tag',       creator=tag_creator)
 	character     = association_proxy('character_rel', 'character', creator=character_creator)
 	artist        = association_proxy('artist_rel',    'artist',    creator=artist_creator)
+	file          = association_proxy('file_rel',      'files',    creator=file_creator)
 
 	__table_args__ = (
 		UniqueConstraint('postid'),
