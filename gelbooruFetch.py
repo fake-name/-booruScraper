@@ -15,9 +15,9 @@ import os.path
 import time
 import datetime
 
-class DanbooruFetcher(object):
+class GelbooruFetcher(object):
 	def __init__(self):
-		self.log = logging.getLogger("Main.Danbooru")
+		self.log = logging.getLogger("Main.Gelbooru")
 		self.wg = webFunctions.WebGetRobust()
 
 		# db.session = db.Session()
@@ -44,25 +44,26 @@ class DanbooruFetcher(object):
 
 	def extractTags(self, job, tagsection):
 
-		characterlis = tagsection.find_all('li', class_='category-4')
-		artistlis    = tagsection.find_all('li', class_='category-1')
-		taglis       = tagsection.find_all('li', class_='category-0')
+		taglis       = tagsection.find_all('li', class_='tag-type-general')
+		characterlis = tagsection.find_all('li', class_='tag-type-character')
+		artistlis    = tagsection.find_all('li', class_='tag-type-artist')
 
 
 		tags = []
 		for tagli in taglis:
-			tag = tagli.find('a', class_="search-tag").get_text()
+			tag = tagli.find_all('a')[1].get_text()
 			tags.append(tag)
 
 		artists = []
 		for artistli in artistlis:
-			artist = artistli.find('a', class_="search-tag").get_text()
+			artist = artistli.find_all('a')[1].get_text()
 			artists.append(artist)
 
 		characters = []
 		for characterli in characterlis:
-			character = characterli.find('a', class_="search-tag").get_text()
+			character = characterli.find_all('a')[1].get_text()
 			characters.append(character)
+
 
 		for tag in tags:
 			if tag not in job.tags:
@@ -75,14 +76,19 @@ class DanbooruFetcher(object):
 				job.character.append(character)
 
 	def getxy(self, instr):
-		found = re.search(r"\((\d+)x(\d+)\)", instr)
+		found = re.search(r"(\d+)x(\d+)", instr)
 		x, y = found.groups()
 		return x, y
 
 	def extractInfo(self, job, infosection):
-		imgurl = None
+
 		for li in infosection.find_all("li"):
-			rawt = li.get_text()
+			rawt = li.get_text().strip()
+			if not rawt:
+				continue
+			if not ":" in rawt:
+				print("rawt: '{}'".format(rawt))
+
 			name, val = rawt.split(":", 1)
 
 			name = name.strip()
@@ -93,41 +99,43 @@ class DanbooruFetcher(object):
 			elif name == 'Favorites':
 				job.favorites = val
 			elif name == 'Score':
-				job.score = val
-			elif name == 'Date':
+				job.score = val.split()[0]
+			elif name == 'Posted':
 				cal = parsedatetime.Calendar()
-				tstruct, pstat = cal.parse(val)
+				itemdate = val.split("at")[0]
+				tstruct, pstat = cal.parse(itemdate)
 				assert pstat == 1 or pstat == 2
 				job.posted = datetime.datetime.fromtimestamp(time.mktime(tstruct))
 			elif name == 'Size':
-				if not '\n' in val:
-					return False
-				fsize, res = val.split("\n")
-				fsize, res = fsize.strip(), res.strip()
-				job.imgx, job.imgy = self.getxy(res)
+				job.imgx, job.imgy = self.getxy(val)
 
-				link = li.find("a")
-				if link:
-					imgurl = link['href']
 
 			elif name == 'Status':
 				job.status = val
 				# Do not try to fetch things that are banned (e.g. removed)
 				if val == 'Banned':
 					job.dlstate=-2
-			elif name in ['Approver', 'ID', 'Source', 'Uploader']:
+			elif name in ['Approver', 'Id', 'Source', 'Uploader']:
 				pass
 			else:
 				self.log.warning("Unknown item key-value:")
 				self.log.warning("	'{}' -> '{}'".format(name, val))
-		return imgurl
+
+	def getImageUrl(self, soup):
+		img = soup.find('a', text='Original image')
+		return img['href']
+
 	def extractMeta(self, job, soup):
-		tagsection = soup.find('section', id='tag-list')
+		sidebar = soup.find('div', class_='sidebar4').find('div', class_='sidebar3')
+
+		tagsection = sidebar.find('ul', id='tag-sidebar')
 		assert tagsection
-		infosection = soup.find('section', id='post-information')
+		infosection = sidebar.find('div', id='stats')
 		assert infosection
 		self.extractTags(job, tagsection)
-		imgurl = self.extractInfo(job, infosection)
+		self.extractInfo(job, infosection)
+		imgurl = self.getImageUrl(soup)
+
 		return imgurl
 
 
@@ -191,23 +199,32 @@ class DanbooruFetcher(object):
 		# print(fname)
 
 	def processJob(self, job):
-		pageurl = 'https://danbooru.donmai.us/posts/{}'.format(job.postid)
-		try:
-			soup = self.wg.getSoup(pageurl)
-		except urllib.error.URLError:
-			job.dlstate=-1
-			db.session.commit()
-			return
+		pageurl = 'http://gelbooru.com/index.php?page=post&s=view&id={}'.format(job.postid)
+		while 1:
+			try:
+				soup = self.wg.getSoup(pageurl)
+				if 'You are viewing an advertisement' in soup.get_text():
+					self.log.warning("Working around advertisement. Sleeping 10 seconds")
+					time.sleep(10)
+				else:
+					break
+			except urllib.error.URLError:
+				job.dlstate=-1
+				db.session.commit()
+				return
 
-		text = soup.get_text()
-		if 'You need a gold account to see this image.' in text:
-			job.dlstate=-3
-			db.session.commit()
-			return
-		if 'This post was deleted for the following reasons' in text:
+		if 'Gelbooru - Image List' in soup.title.get_text():
+			self.log.warn("Image has been removed.")
 			job.dlstate=-4
 			db.session.commit()
 			return
+
+		# text = soup.get_text()
+		# if 'You need a gold account to see this image.' in text:
+		# 	job.dlstate=-3
+		# 	db.session.commit()
+		# 	return
+
 		err = 0
 		while err < 5:
 			try:
@@ -238,7 +255,7 @@ class DanbooruFetcher(object):
 
 def run(indice):
 	print("Runner {}!".format(indice))
-	fetcher = DanbooruFetcher()
+	fetcher = GelbooruFetcher()
 	remainingTasks = True
 
 	try:
