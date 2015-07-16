@@ -18,7 +18,7 @@ import datetime
 class GelbooruFetcher(object):
 	def __init__(self):
 		self.log = logging.getLogger("Main.Gelbooru")
-		self.wg = webFunctions.WebGetRobust()
+		self.wg = webFunctions.WebGetRobust(logPath="Main.Gelbooru.Web")
 
 		# db.session = db.Session()
 
@@ -103,6 +103,7 @@ class GelbooruFetcher(object):
 			elif name == 'Posted':
 				cal = parsedatetime.Calendar()
 				itemdate = val.split("at")[0]
+				itemdate = val.split("by")[0]
 				tstruct, pstat = cal.parse(itemdate)
 				assert pstat == 1 or pstat == 2
 				job.posted = datetime.datetime.fromtimestamp(time.mktime(tstruct))
@@ -219,6 +220,12 @@ class GelbooruFetcher(object):
 			db.session.commit()
 			return
 
+		if 'This post was deleted. Reason: Duplicate of' in soup.get_text():
+			self.log.warn("Image has been removed.")
+			job.dlstate=-6
+			db.session.commit()
+			return
+
 		# text = soup.get_text()
 		# if 'You need a gold account to see this image.' in text:
 		# 	job.dlstate=-3
@@ -238,6 +245,9 @@ class GelbooruFetcher(object):
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
+			except urllib.error.URLError:
+				job.dlstate=-8
+				db.session.commit()
 
 
 

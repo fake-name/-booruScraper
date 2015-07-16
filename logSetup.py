@@ -36,10 +36,10 @@ class ColourHandler(logging.Handler):
 
 		segments = record.name.split(".")
 		tname = threading.current_thread().name
+		segments.append(tname)
 		if segments[0] == "Main" and len(segments) > 1:
-			# segments.pop(0)
-			# segments[0] = "Main."+segments[0]
-			segments[0] = "Main."+tname
+			segments.pop(0)
+			segments[0] = "Main."+segments[0]
 
 		nameList = []
 

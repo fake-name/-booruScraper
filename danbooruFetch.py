@@ -22,6 +22,9 @@ class DanbooruFetcher(fetchBase.AbstractFetcher):
 	pluginkey = 'Danbooru'
 	loggerpath = "Main.Danbooru"
 
+	def __init__(self):
+		self.log = logging.getLogger("Main.Danbooru")
+		self.wg = webFunctions.WebGetRobust(logPath="Main.Danbooru.Web")
 
 	def extractTags(self, job, tagsection):
 
@@ -145,6 +148,10 @@ class DanbooruFetcher(fetchBase.AbstractFetcher):
 			return
 		if 'This post was deleted for the following reasons' in text:
 			job.dlstate=-4
+			db.session.commit()
+			return
+		if 'Save this flash' in text:
+			job.dlstate=-9
 			db.session.commit()
 			return
 		err = 0

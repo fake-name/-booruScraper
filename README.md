@@ -14,3 +14,7 @@ Potential ideas:
 	 - http://www.zerochan.net/
 	 - http://e-shuushuu.net/
 	 - https://konachan.com/
+	 - https://chan.sankakucomplex.com/
+	 - http://rule34.xxx/
+	 - http://paheal.net/
+	 - https://e621.net/ (furry?)

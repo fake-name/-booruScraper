@@ -9,7 +9,7 @@ import gelbooruFetch
 import runstate
 import concurrent.futures
 
-THREADS = 1
+# THREADS = 6
 THREADS = 30
 
 def insertDanbooruStartingPoints():
@@ -72,6 +72,8 @@ def go():
 	executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREADS)
 	try:
 		# for x in range(2):
+		# executor.submit(danbooruFetch.run, 0)
+		# executor.submit(gelbooruFetch.run, 0)
 		for x in range(THREADS//2):
 			executor.submit(danbooruFetch.run, x)
 		for x in range(THREADS//2):

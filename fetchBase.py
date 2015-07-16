@@ -35,7 +35,7 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 	def __init__(self):
 		self.log = logging.getLogger(self.loggerpath)
-		self.wg = webFunctions.WebGetRobust()
+
 
 		# db.session = db.Session()
 
