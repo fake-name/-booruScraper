@@ -206,7 +206,7 @@ class GelbooruFetcher(object):
 				soup = self.wg.getSoup(pageurl)
 				if 'You are viewing an advertisement' in soup.get_text():
 					self.log.warning("Working around advertisement. Sleeping 10 seconds")
-					time.sleep(10)
+					time.sleep(13)
 				else:
 					break
 			except urllib.error.URLError:

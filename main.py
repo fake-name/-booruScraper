@@ -6,6 +6,7 @@ logSetup.initLogging()
 
 import danbooruFetch
 import gelbooruFetch
+import r34xxxScrape
 import runstate
 import concurrent.futures
 
@@ -16,8 +17,9 @@ def insertDanbooruStartingPoints():
 
 	tmp = db.session.query(db.Releases)           \
 		.filter(db.Releases.postid == 1)          \
-		.filter(db.Releases.source == 'Danbooru') \
-		.count()
+		.filter(db.Releases.source == 'Danbooru')
+
+	tmp = tmp.count()
 	if not tmp:
 		for x in range(2070000):
 			new = db.Releases(dlstate=0, postid=x, source='Danbooru')
@@ -52,6 +54,30 @@ def insertGelbooruStartingPoints():
 			# 	db.session.flush()
 			# 	print("Flushed.")
 	db.session.commit()
+def insertR34xxxStartingPoints():
+
+	tmp = db.session.query(db.Releases)           \
+		.filter(db.Releases.postid == 1)          \
+		.filter(db.Releases.source == 'Rule34.xxx') \
+		.count()
+	if not tmp:
+
+		print("Building insert data structure")
+		dat = [{"dlstate" : 0, "postid" : x, "source" : 'Rule34.xxx'} for x in range(1844200)]
+		print("Building insert query")
+		q = db.Releases.__table__.insert().values(dat)
+		print("Built. Doing insert.")
+		db.engine.execute(q)
+		print("Done.")
+		# for x in :
+
+			# new = db.Releases(dlstate=0, postid=x, source='Gelbooru')
+			# # db.session.add(new)
+			# if x % 100000 == 0:
+			# 	print("Loop ", x, "flushing...")
+			# 	db.session.flush()
+			# 	print("Flushed.")
+	db.session.commit()
 
 
 def resetDlstate():
@@ -64,20 +90,23 @@ def resetDlstate():
 def go():
 	insertDanbooruStartingPoints()
 	insertGelbooruStartingPoints()
+	insertR34xxxStartingPoints()
 	resetDlstate()
 
 
-
+	# r34xxxScrape.run(0)
 
 	executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREADS)
 	try:
 		# for x in range(2):
 		# executor.submit(danbooruFetch.run, 0)
 		# executor.submit(gelbooruFetch.run, 0)
-		for x in range(THREADS//2):
-			executor.submit(danbooruFetch.run, x)
-		for x in range(THREADS//2):
-			executor.submit(gelbooruFetch.run, x)
+		for x in range(THREADS):
+			executor.submit(r34xxxScrape.run, x)
+		# for x in range(THREADS//2):
+		# 	executor.submit(danbooruFetch.run, x)
+		# for x in range(THREADS//2):
+		# 	executor.submit(gelbooruFetch.run, x)
 		executor.shutdown()
 	except KeyboardInterrupt:
 		print("Waiting for executor.")

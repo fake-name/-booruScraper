@@ -43,11 +43,12 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 		while 1:
 			try:
 				job = db.session.query(db.Releases)               \
-					.filter(db.Releases.dlstate == 0)             \
 					.filter(db.Releases.source == self.pluginkey) \
+					.filter(db.Releases.dlstate == 0)             \
 					.order_by(db.Releases.postid)                 \
-					.limit(1)                                     \
-					.one()
+					.limit(1)
+
+				job = job.scalar()
 				if job == None:
 					return None
 				job.dlstate = 1
