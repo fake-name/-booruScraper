@@ -196,3 +196,13 @@ def run(indice):
 		print("Unhandled exception!")
 		traceback.print_exc()
 		raise
+
+
+
+if __name__ == '__main__':
+
+	import logSetup
+	logSetup.initLogging()
+
+	run(1)
+

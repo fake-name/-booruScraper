@@ -87,7 +87,7 @@ class R34xxxFetcher(danbooruFetch.DanbooruFetcher):
 				cal = parsedatetime.Calendar()
 				val = val.split("by")[0]
 				tstruct, pstat = cal.parse(val)
-				assert pstat == 1 or pstat == 2
+				assert pstat == 1 or pstat == 2 or pstat == 3
 				job.posted = datetime.datetime.fromtimestamp(time.mktime(tstruct))
 			elif name == 'Size':
 				if not '\n' in val:
@@ -141,7 +141,7 @@ class R34xxxFetcher(danbooruFetch.DanbooruFetcher):
 		# print(fname)
 
 	def processJob(self, job):
-		pageurl = 'http://rule34.xxx/index.php?page=post&s=view&id={}'.format(job.postid)
+		pageurl = 'https://rule34.xxx/index.php?page=post&s=view&id={}'.format(job.postid)
 		try:
 			soup = self.wg.getSoup(pageurl)
 		except urllib.error.URLError:
@@ -174,6 +174,7 @@ class R34xxxFetcher(danbooruFetch.DanbooruFetcher):
 				break
 			except AssertionError:
 				self.log.info("Assertion error?: '%s'", pageurl)
+				traceback.print_exc()
 				job.dlstate=-50
 				db.session.rollback()
 				break
@@ -210,3 +211,14 @@ def run(indice):
 		print("Unhandled exception!")
 		traceback.print_exc()
 		raise
+
+
+
+if __name__ == '__main__':
+
+	import logSetup
+	logSetup.initLogging()
+
+	run(1)
+
+

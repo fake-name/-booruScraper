@@ -102,10 +102,12 @@ class GelbooruFetcher(object):
 				job.score = val.split()[0]
 			elif name == 'Posted':
 				cal = parsedatetime.Calendar()
-				itemdate = val.split("at")[0]
-				itemdate = val.split("by")[0]
+				itemdate =      val.split("at")[0]
+				itemdate = itemdate.split("by")[0]
+				print("itemdate", itemdate)
 				tstruct, pstat = cal.parse(itemdate)
-				assert pstat == 1 or pstat == 2
+				print("Ret: ", pstat, tstruct)
+				assert pstat == 1 or pstat == 2 or pstat == 3
 				job.posted = datetime.datetime.fromtimestamp(time.mktime(tstruct))
 			elif name == 'Size':
 				job.imgx, job.imgy = self.getxy(val)
@@ -277,3 +279,11 @@ def run(indice):
 		print("Unhandled exception!")
 		traceback.print_exc()
 		raise
+
+if __name__ == '__main__':
+
+	import logSetup
+	logSetup.initLogging()
+
+	run(1)
+

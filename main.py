@@ -1,6 +1,9 @@
 
 import sys
 import database as db
+
+from sqlalchemy.dialects.postgresql import insert
+
 import logSetup
 logSetup.initLogging()
 
@@ -13,71 +16,26 @@ import concurrent.futures
 # THREADS = 6
 THREADS = 30
 
-def insertDanbooruStartingPoints():
+UPSERT_STEP = 10000
 
-	tmp = db.session.query(db.Releases)           \
-		.filter(db.Releases.postid == 1)          \
-		.filter(db.Releases.source == 'Danbooru')
+def do_upsert(target, maxitems):
+	for x in range(maxitems, 0, UPSERT_STEP * -1):
 
-	tmp = tmp.count()
-	if not tmp:
-		for x in range(2070000):
-			new = db.Releases(dlstate=0, postid=x, source='Danbooru')
-			db.session.add(new)
-			if x % 10000 == 0:
-				print("Loop ", x, "flushing...")
-				db.session.flush()
-				print("Flushed.")
-	db.session.commit()
+		print("[%s] - Building insert data structure %s -> %s" % (target, x, x+UPSERT_STEP))
+		dat = [{"dlstate" : 0, "postid" : x, "source" : target} for x in range(x, x+UPSERT_STEP)]
+		print("[%s] - Building insert query" % target)
+		q = insert(db.Releases).values(dat)
+		q = q.on_conflict_do_nothing()
+		print("[%s] - Built. Doing insert." % target)
+		ret = db.session.execute(q)
 
-def insertGelbooruStartingPoints():
+		changes = ret.rowcount
+		print("[%s] - Changed rows: %s" % (target, changes))
+		db.session.commit()
 
-	tmp = db.session.query(db.Releases)           \
-		.filter(db.Releases.postid == 1)          \
-		.filter(db.Releases.source == 'Gelbooru') \
-		.count()
-	if not tmp:
-
-		print("Building insert data structure")
-		dat = [{"dlstate" : 0, "postid" : x, "source" : 'Gelbooru'} for x in range(2900000)]
-		print("Building insert query")
-		q = db.Releases.__table__.insert().values(dat)
-		print("Built. Doing insert.")
-		db.engine.execute(q)
-		print("Done.")
-		# for x in :
-
-			# new = db.Releases(dlstate=0, postid=x, source='Gelbooru')
-			# # db.session.add(new)
-			# if x % 100000 == 0:
-			# 	print("Loop ", x, "flushing...")
-			# 	db.session.flush()
-			# 	print("Flushed.")
-	db.session.commit()
-def insertR34xxxStartingPoints():
-
-	tmp = db.session.query(db.Releases)           \
-		.filter(db.Releases.postid == 1)          \
-		.filter(db.Releases.source == 'Rule34.xxx') \
-		.count()
-	if not tmp:
-
-		print("Building insert data structure")
-		dat = [{"dlstate" : 0, "postid" : x, "source" : 'Rule34.xxx'} for x in range(1844200)]
-		print("Building insert query")
-		q = db.Releases.__table__.insert().values(dat)
-		print("Built. Doing insert.")
-		db.engine.execute(q)
-		print("Done.")
-		# for x in :
-
-			# new = db.Releases(dlstate=0, postid=x, source='Gelbooru')
-			# # db.session.add(new)
-			# if x % 100000 == 0:
-			# 	print("Loop ", x, "flushing...")
-			# 	db.session.flush()
-			# 	print("Flushed.")
-	db.session.commit()
+		if not changes:
+			break
+	print("[%s] - Done." % target)
 
 
 def resetDlstate():
@@ -88,25 +46,29 @@ def resetDlstate():
 
 
 def go():
-	insertDanbooruStartingPoints()
-	insertGelbooruStartingPoints()
-	insertR34xxxStartingPoints()
+	print("Inserting start URLs")
+
+	do_upsert("Danbooru", 2700000)
+	do_upsert('Gelbooru', 3600000)
+	do_upsert('Rule34.xxx', 2300000)
+
+	print("Resetting DL states.")
 	resetDlstate()
 
-
-	# r34xxxScrape.run(0)
-
+	print("Creating run contexts")
 	executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREADS)
 	try:
 		# for x in range(2):
 		# executor.submit(danbooruFetch.run, 0)
 		# executor.submit(gelbooruFetch.run, 0)
-		for x in range(THREADS):
+		for x in range(THREADS//3):
 			executor.submit(r34xxxScrape.run, x)
-		# for x in range(THREADS//2):
-		# 	executor.submit(danbooruFetch.run, x)
-		# for x in range(THREADS//2):
-		# 	executor.submit(gelbooruFetch.run, x)
+		for x in range(THREADS//2):
+			executor.submit(danbooruFetch.run, x)
+		for x in range(THREADS//2):
+			executor.submit(gelbooruFetch.run, x)
+
+		print("Waiting for workers to complete.")
 		executor.shutdown()
 	except KeyboardInterrupt:
 		print("Waiting for executor.")

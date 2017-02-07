@@ -59,6 +59,7 @@ def go():
 		proc += 1
 		if proc % 50 == 0:
 			db.session.commit()
+
 if __name__ == '__main__':
 	go()
 

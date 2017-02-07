@@ -1,4 +1,9 @@
-Minimalistic high-volume multi-threaded archive-tool for Danbooru & Gelbooru.
+Minimalistic high-volume multi-threaded archive-tool for imagegallery sites.
+
+Currently Supports:
+ - Danbooru
+ - Gelbooru
+ - http://rule34.xxx/
 
 Written because I needed a extremely large image database *with tags* to 
 use for some experiments with training neural nets.
@@ -15,6 +20,5 @@ Potential ideas:
 	 - http://e-shuushuu.net/
 	 - https://konachan.com/
 	 - https://chan.sankakucomplex.com/
-	 - http://rule34.xxx/
 	 - http://paheal.net/
 	 - https://e621.net/ (furry?)

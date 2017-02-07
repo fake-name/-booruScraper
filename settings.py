@@ -4,7 +4,7 @@
 DATABASE_USER    = "dbarchiver"
 DATABASE_PASS    = "YEkTYt4sCcWctY"
 DATABASE_DB_NAME = "dbmirror"
-DATABASE_IP      = "10.1.1.8"
+DATABASE_IP      = "10.1.1.61"
 # Note that a local socket will be tried before the DATABASE_IP value, so if DATABASE_IP is
 # invalid, it may work anyways.
 
