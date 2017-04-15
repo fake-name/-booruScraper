@@ -10,6 +10,8 @@ logSetup.initLogging()
 import danbooruFetch
 import gelbooruFetch
 import r34xxxScrape
+import KonaChanFetch
+import e621Scrape
 import runstate
 import concurrent.futures
 
@@ -48,25 +50,25 @@ def resetDlstate():
 def go():
 	print("Inserting start URLs")
 
-	do_upsert("Danbooru", 2700000)
-	do_upsert('Gelbooru', 3600000)
+	do_upsert("Danbooru", 2750000)
+	do_upsert('Gelbooru', 3650000)
 	do_upsert('Rule34.xxx', 2300000)
+	do_upsert('e621', 1200000)
+	do_upsert('KonaChan', 245000)
 
 	print("Resetting DL states.")
 	resetDlstate()
 
 	print("Creating run contexts")
 	executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREADS)
+
+	plugins = [r34xxxScrape, danbooruFetch, gelbooruFetch, e621Scrape, KonaChanFetch]
+
 	try:
-		# for x in range(2):
-		# executor.submit(danbooruFetch.run, 0)
-		# executor.submit(gelbooruFetch.run, 0)
-		for x in range(THREADS//3):
-			executor.submit(r34xxxScrape.run, x)
-		for x in range(THREADS//2):
-			executor.submit(danbooruFetch.run, x)
-		for x in range(THREADS//2):
-			executor.submit(gelbooruFetch.run, x)
+		for plugin in plugins:
+			for x in range(THREADS // len(plugins)):
+				executor.submit(plugin.run, x)
+
 
 		print("Waiting for workers to complete.")
 		executor.shutdown()

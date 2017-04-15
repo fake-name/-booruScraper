@@ -4,6 +4,8 @@ Currently Supports:
  - Danbooru
  - Gelbooru
  - http://rule34.xxx/
+ - https://e621.net/
+ - https://konachan.com/
 
 Written because I needed a extremely large image database *with tags* to 
 use for some experiments with training neural nets.
@@ -18,7 +20,5 @@ Potential ideas:
  - Add support for:
 	 - http://www.zerochan.net/
 	 - http://e-shuushuu.net/
-	 - https://konachan.com/
 	 - https://chan.sankakucomplex.com/
 	 - http://paheal.net/
-	 - https://e621.net/ (furry?)
