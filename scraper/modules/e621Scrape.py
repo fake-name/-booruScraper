@@ -1,31 +1,25 @@
 
-import database as db
-import webFunctions
-import logging
 import traceback
-import sqlalchemy.exc
-import runstate
 import urllib.error
 import urllib.parse
 import re
-import parsedatetime
-import os
-import settings
-import os.path
 import time
 import datetime
 
-import fetchBase
+import parsedatetime
+import sqlalchemy.exc
 
-import fetchBase
-class E621Fetcher(fetchBase.AbstractFetcher):
+import scraper.runstate
+import scraper.fetchBase
+import scraper.database as db
+
+class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey = 'e621'
 	loggerpath = "Main.e621"
 
 	def __init__(self):
-		self.log = logging.getLogger("Main.e621")
-		self.wg = webFunctions.WebGetRobust(logPath="Main.e621.Web")
+		super().__init__()
 
 	def extractTags(self, job, tagsection):
 
@@ -218,7 +212,7 @@ def run(indice):
 	remainingTasks = True
 
 	try:
-		while remainingTasks and runstate.run:
+		while remainingTasks and scraper.runstate.run:
 			remainingTasks = fetcher.retreiveItem()
 	except KeyboardInterrupt:
 		return

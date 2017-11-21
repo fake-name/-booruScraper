@@ -1,29 +1,25 @@
 
-import database as db
-import webFunctions
-import logging
+import datetime
+import re
+import time
 import traceback
-import sqlalchemy.exc
-import runstate
 import urllib.error
 import urllib.parse
-import re
-import parsedatetime
-import os
-import settings
-import os.path
-import time
-import datetime
 
-import fetchBase
-class KonaChanFetcher(fetchBase.AbstractFetcher):
+import parsedatetime
+import sqlalchemy.exc
+
+import scraper.runstate
+import scraper.database as db
+import scraper.fetchBase
+
+class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey = 'KonaChan'
 	loggerpath = "Main.KonaChan"
 
 	def __init__(self):
-		self.log = logging.getLogger("Main.KonaChan")
-		self.wg = webFunctions.WebGetRobust(logPath="Main.KonaChan.Web")
+		super().__init__()
 
 	def extractTags(self, job, tagsection):
 
@@ -231,7 +227,7 @@ def run(indice):
 	remainingTasks = True
 
 	try:
-		while remainingTasks and runstate.run:
+		while remainingTasks and scraper.runstate.run:
 			remainingTasks = fetcher.retreiveItem()
 	except KeyboardInterrupt:
 		return

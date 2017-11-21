@@ -1,31 +1,25 @@
 
-import database as db
-import webFunctions
-import logging
+import datetime
+import re
+import time
 import traceback
-import sqlalchemy.exc
-import runstate
 import urllib.error
 import urllib.parse
-import re
+
+import sqlalchemy.exc
 import parsedatetime
-import os
-import settings
-import os.path
-import time
-import datetime
 
-import fetchBase
+import scraper.runstate
+import scraper.database as db
+import scraper.fetchBase
 
-import danbooruFetch
-class R34xxxFetcher(danbooruFetch.DanbooruFetcher):
+class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey = 'Rule34.xxx'
 	loggerpath = "Main.Rule34-xxx"
 
 	def __init__(self):
-		self.log = logging.getLogger("Main.Rule34-xxx")
-		self.wg = webFunctions.WebGetRobust(logPath="Main.Rule34-xxx.Web")
+		super().__init__()
 
 	def extractTags(self, job, tagsection):
 
@@ -110,7 +104,7 @@ class R34xxxFetcher(danbooruFetch.DanbooruFetcher):
 				pass
 			else:
 				self.log.warning("Unknown item key-value:")
-				self.log.warning("	'{}' -> '{}'".format(name, val))
+				self.log.warning("	'%s' -> '%s'", name, val)
 		return imgurl
 
 	def extractMeta(self, job, soup):
@@ -203,7 +197,7 @@ def run(indice):
 	remainingTasks = True
 
 	try:
-		while remainingTasks and runstate.run:
+		while remainingTasks and scraper.runstate.run:
 			remainingTasks = fetcher.retreiveItem()
 	except KeyboardInterrupt:
 		return

@@ -1,24 +1,25 @@
 
-import database as db
-import webFunctions
-import logging
 import traceback
-import sqlalchemy.exc
-import runstate
 import urllib.error
 import urllib.parse
 import re
-import parsedatetime
-import os
-import settings
-import os.path
 import time
 import datetime
 
-class GelbooruFetcher(object):
+import sqlalchemy.exc
+import parsedatetime
+
+import scraper.runstate
+import scraper.database as db
+import scraper.fetchBase
+
+class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
+
+	pluginkey = 'Gelbooru'
+	loggerpath = "Main.Gelbooru"
+
 	def __init__(self):
-		self.log = logging.getLogger("Main.Gelbooru")
-		self.wg = webFunctions.WebGetRobust(logPath="Main.Gelbooru.Web")
+		super().__init__()
 
 		# db.session = db.Session()
 
@@ -143,48 +144,6 @@ class GelbooruFetcher(object):
 
 
 
-	def saveFile(self, filename, fileCont):
-		if not os.path.exists(settings.storeDir):
-			self.log.warn("Cache directory for book items did not exist. Creating")
-			self.log.warn("Directory at path '%s'", settings.storeDir)
-			os.makedirs(settings.storeDir)
-
-
-		fHash, ext = os.path.splitext(filename)
-
-		ext   = ext.lower()
-		fHash = fHash.upper()
-
-		# use the first 3 chars of the hash for the folder name.
-		# Since it's hex-encoded, that gives us a max of 2^12 bits of
-		# directories, or 4096 dirs.
-		dirName = fHash[:3]
-
-		dirPath = os.path.join(settings.storeDir, dirName)
-		if not os.path.exists(dirPath):
-			os.makedirs(dirPath)
-
-		ext = os.path.splitext(filename)[-1]
-
-		ext   = ext.lower()
-		fHash = fHash.upper()
-
-		# The "." is part of the ext.
-		filename = '{filename}{ext}'.format(filename=fHash, ext=ext)
-
-		fqpath = os.path.join(dirPath, filename)
-		fqpath = os.path.abspath(fqpath)
-		if not fqpath.startswith(settings.storeDir):
-			raise ValueError("Generating the file path to save a cover produced a path that did not include the storage directory?")
-
-		locpath = fqpath[len(settings.storeDir):]
-
-		with open(fqpath, "wb") as fp:
-			fp.write(fileCont)
-
-		return locpath
-
-
 	def fetchImage(self, job, url, srcurl):
 		url = urllib.parse.urljoin(srcurl, url)
 		fname = url.split("/")[-1]
@@ -217,13 +176,13 @@ class GelbooruFetcher(object):
 				return
 
 		if 'Gelbooru - Image List' in soup.title.get_text():
-			self.log.warn("Image has been removed.")
+			self.log.warning("Image has been removed.")
 			job.dlstate=-4
 			db.session.commit()
 			return
 
 		if 'This post was deleted. Reason: Duplicate of' in soup.get_text():
-			self.log.warn("Image has been removed.")
+			self.log.warning("Image has been removed.")
 			job.dlstate=-6
 			db.session.commit()
 			return
@@ -271,7 +230,7 @@ def run(indice):
 	remainingTasks = True
 
 	try:
-		while remainingTasks and runstate.run:
+		while remainingTasks and scraper.runstate.run:
 			remainingTasks = fetcher.retreiveItem()
 	except KeyboardInterrupt:
 		return

@@ -1,22 +1,19 @@
 
-import database as db
-import webFunctions
+
 import logging
 import traceback
-import sqlalchemy.exc
-import runstate
-import urllib.error
-import urllib.parse
-import re
-import parsedatetime
-import hashlib
 import os
-import settings
 import os.path
-import time
-import datetime
-
 import abc
+import hashlib
+
+
+import sqlalchemy.exc
+
+import settings
+import util.WebRequest
+import scraper.runstate
+import scraper.database as db
 
 class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
@@ -35,6 +32,7 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 	def __init__(self):
 		self.log = logging.getLogger(self.loggerpath)
+		self.wg = util.WebRequest.WebGetRobust(logPath=self.loggerpath+".Web")
 
 
 		# db.session = db.Session()
@@ -49,7 +47,7 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 					.limit(1)
 
 				job = job.scalar()
-				if job == None:
+				if job is None:
 					return None
 				job.dlstate = 1
 				db.session.commit()
@@ -64,8 +62,8 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 	def saveFile(self, row, filename, fileCont):
 		if not os.path.exists(settings.storeDir):
-			self.log.warn("Cache directory for book items did not exist. Creating")
-			self.log.warn("Directory at path '%s'", settings.storeDir)
+			self.log.warning("Cache directory for book items did not exist. Creating")
+			self.log.warning("Directory at path '%s'", settings.storeDir)
 			os.makedirs(settings.storeDir)
 
 
@@ -115,19 +113,62 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 
 
+	def saveFile(self, filename, fileCont):
+		if not os.path.exists(settings.storeDir):
+			self.log.warn("Cache directory for book items did not exist. Creating")
+			self.log.warn("Directory at path '%s'", settings.storeDir)
+			os.makedirs(settings.storeDir)
 
 
-def run(indice):
-	print("Runner {}!".format(indice))
-	fetcher = DanbooruFetcher()
-	remainingTasks = True
+		fHash, ext = os.path.splitext(filename)
 
-	try:
-		while remainingTasks and runstate.run:
-			remainingTasks = fetcher.retreiveItem()
-	except KeyboardInterrupt:
-		return
-	except:
-		print("Unhandled exception!")
-		traceback.print_exc()
-		raise
+		ext   = ext.lower()
+		fHash = fHash.upper()
+
+		# use the first 3 chars of the hash for the folder name.
+		# Since it's hex-encoded, that gives us a max of 2^12 bits of
+		# directories, or 4096 dirs.
+		dirName = fHash[:3]
+
+		dirPath = os.path.join(settings.storeDir, dirName)
+		if not os.path.exists(dirPath):
+			os.makedirs(dirPath)
+
+		ext = os.path.splitext(filename)[-1]
+
+		ext   = ext.lower()
+		fHash = fHash.upper()
+
+		# The "." is part of the ext.
+		filename = '{filename}{ext}'.format(filename=fHash, ext=ext)
+
+		fqpath = os.path.join(dirPath, filename)
+		fqpath = os.path.abspath(fqpath)
+		if not fqpath.startswith(settings.storeDir):
+			raise ValueError("Generating the file path to save a cover produced a path that did not include the storage directory?")
+
+		locpath = fqpath[len(settings.storeDir):]
+
+		with open(fqpath, "wb") as fp:
+			fp.write(fileCont)
+
+		return locpath
+
+
+
+
+	@classmethod
+	def run_scraper(cls, indice):
+		print("Runner {}!".format(indice))
+		fetcher = cls()
+		remainingTasks = True
+
+		try:
+			while remainingTasks and scraper.runstate.run:
+				remainingTasks = fetcher.retreiveItem()
+		except KeyboardInterrupt:
+			return
+		except:
+			print("Unhandled exception!")
+			traceback.print_exc()
+			raise
