@@ -16,7 +16,7 @@ import runstate
 import concurrent.futures
 
 # THREADS = 6
-THREADS = 30
+THREADS = 15
 
 UPSERT_STEP = 10000
 
@@ -57,7 +57,7 @@ def go():
 	do_upsert('KonaChan', 245000)
 
 	print("Resetting DL states.")
-	resetDlstate()
+	# resetDlstate()
 
 	print("Creating run contexts")
 	executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREADS)
@@ -66,7 +66,7 @@ def go():
 
 	try:
 		for plugin in plugins:
-			for x in range(THREADS // len(plugins)):
+			for x in range(50):
 				executor.submit(plugin.run, x)
 
 
