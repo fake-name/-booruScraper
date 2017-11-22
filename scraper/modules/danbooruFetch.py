@@ -15,8 +15,9 @@ import scraper.fetchBase
 
 class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
-	pluginkey = 'Danbooru'
-	loggerpath = "Main.Danbooru"
+	pluginkey         = 'Danbooru'
+	loggerpath        = "Main.Danbooru"
+	content_count_max = 2750000
 
 	def __init__(self):
 		super().__init__()
@@ -119,7 +120,7 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 		cont = self.wg.getpage(url, addlHeaders={'Referer':srcurl})
 
-		fpath = self.saveFile(job, fname, cont)
+		fpath = self.saveFileRow(job, fname, cont)
 		self.log.info("Saved file to path: '%s'", fpath)
 
 		job.filename = fname

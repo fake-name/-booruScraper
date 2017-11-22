@@ -15,8 +15,9 @@ import scraper.fetchBase
 
 class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
-	pluginkey = 'Gelbooru'
-	loggerpath = "Main.Gelbooru"
+	pluginkey         = 'Gelbooru'
+	loggerpath        = "Main.Gelbooru"
+	content_count_max = 3650000
 
 	def __init__(self):
 		super().__init__()
@@ -151,7 +152,7 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 		cont = self.wg.getpage(url, addlHeaders={'Referer':srcurl})
 
-		fpath = self.saveFile(fname, cont)
+		fpath = self.saveFileRow(job, fname, cont)
 		self.log.info("Saved file to path: '%s'", fpath)
 
 		job.filename = fname

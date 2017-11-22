@@ -15,8 +15,9 @@ import scraper.fetchBase
 
 class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 
-	pluginkey = 'KonaChan'
-	loggerpath = "Main.KonaChan"
+	pluginkey         = 'KonaChan'
+	loggerpath        = "Main.KonaChan"
+	content_count_max = 245000
 
 	def __init__(self):
 		super().__init__()
@@ -155,11 +156,9 @@ class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 
 		cont = self.wg.getpage(url, addlHeaders={'Referer':srcurl})
 
-		fpath = self.saveFile(job, fname, cont)
+		fpath = self.saveFileRow(job, fname, cont)
 		self.log.info("Saved file to path: '%s'", fpath)
 
-		job.filename = fname
-		job.filepath = fpath
 		job.dlstate  = 2
 		db.session.commit()
 		# print(fname)

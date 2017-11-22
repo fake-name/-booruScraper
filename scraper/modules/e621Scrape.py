@@ -15,8 +15,9 @@ import scraper.database as db
 
 class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 
-	pluginkey = 'e621'
-	loggerpath = "Main.e621"
+	pluginkey         = 'e621'
+	loggerpath        = "Main.e621"
+	content_count_max = 1200000
 
 	def __init__(self):
 		super().__init__()

@@ -15,8 +15,9 @@ import scraper.fetchBase
 
 class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 
-	pluginkey = 'Rule34.xxx'
-	loggerpath = "Main.Rule34-xxx"
+	pluginkey         = 'Rule34.xxx'
+	loggerpath        = "Main.Rule34-xxx"
+	content_count_max = 2300000
 
 	def __init__(self):
 		super().__init__()
@@ -125,7 +126,7 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 
 		cont = self.wg.getpage(url, addlHeaders={'Referer':srcurl})
 
-		fpath = self.saveFile(job, fname, cont)
+		fpath = self.saveFileRow(job, fname, cont)
 		self.log.info("Saved file to path: '%s'", fpath)
 
 		job.filename = fname
