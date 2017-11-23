@@ -17,7 +17,7 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'Rule34.xxx'
 	loggerpath        = "Main.Rule34-xxx"
-	content_count_max = 2300000
+	content_count_max = 2580000
 
 	def __init__(self):
 		super().__init__()

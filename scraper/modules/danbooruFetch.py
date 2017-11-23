@@ -17,7 +17,7 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'Danbooru'
 	loggerpath        = "Main.Danbooru"
-	content_count_max = 2750000
+	content_count_max = 2950000
 
 	def __init__(self):
 		super().__init__()

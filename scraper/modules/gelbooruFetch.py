@@ -17,7 +17,7 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'Gelbooru'
 	loggerpath        = "Main.Gelbooru"
-	content_count_max = 3650000
+	content_count_max = 4000000
 
 	def __init__(self):
 		super().__init__()

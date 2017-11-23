@@ -140,7 +140,7 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 		for x in range(self.content_count_max, 0, UPSERT_STEP * -1):
 
 			self.log.info("[%s] - Building insert data structure %s -> %s", self.pluginkey, x, x+UPSERT_STEP)
-			dat = [{"dlstate" : 'new', "postid" : x, "source" : self.pluginkey} for x in range(x, x+UPSERT_STEP)]
+			dat = [{"state" : 'new', "postid" : x, "source" : self.pluginkey} for x in range(x, x+UPSERT_STEP)]
 			self.log.info("[%s] - Building insert query", self.pluginkey)
 			q = insert(db.Releases).values(dat)
 			q = q.on_conflict_do_nothing()

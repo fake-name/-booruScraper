@@ -17,7 +17,7 @@ class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'KonaChan'
 	loggerpath        = "Main.KonaChan"
-	content_count_max = 245000
+	content_count_max = 260000
 
 	def __init__(self):
 		super().__init__()
