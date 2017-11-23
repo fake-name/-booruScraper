@@ -11,6 +11,8 @@ import scraper.modules.gelbooruFetch
 import scraper.modules.r34xxxScrape
 import scraper.modules.KonaChanFetch
 import scraper.modules.e621Scrape
+import scraper.modules.tbibFetch
+import scraper.modules.xbooruFetch
 
 
 # THREADS = 6
@@ -19,10 +21,12 @@ THREADS = 15
 
 PLUGIN_CLASSES = [
 	scraper.modules.danbooruFetch.DanbooruFetcher,
-	scraper.modules.gelbooruFetch.GelbooruFetcher,
+	# scraper.modules.gelbooruFetch.GelbooruFetcher,
 	scraper.modules.r34xxxScrape.R34xxxFetcher,
 	scraper.modules.KonaChanFetch.KonaChanFetcher,
 	scraper.modules.e621Scrape.E621Fetcher,
+	scraper.modules.tbibFetch.TbibFetcher,
+	scraper.modules.xbooruFetch.XBooruFetcher,
 ]
 
 class RunEngine(object):

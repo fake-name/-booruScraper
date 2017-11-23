@@ -24,29 +24,37 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 		# db.session = db.Session()
 
-
 	def extractTags(self, job, tagsection):
 
-		taglis       = tagsection.find_all('li', class_='tag-type-general')
 		characterlis = tagsection.find_all('li', class_='tag-type-character')
+		specieslis   = tagsection.find_all('li', class_='tag-type-species')
+		copyrlis     = tagsection.find_all('li', class_='tag-type-copyright')
 		artistlis    = tagsection.find_all('li', class_='tag-type-artist')
+		taglis       = tagsection.find_all('li', class_='tag-type-general')
 
 
 		tags = []
 		for tagli in taglis:
-			tag = tagli.find_all('a')[1].get_text()
+			tag = tagli.find_all('a')[-1].get_text()
 			tags.append(tag)
+
+		for speciesli in specieslis:
+			tag = speciesli.find_all('a')[-1].get_text()
+			tags.append("species " + tag)
+
+		for copyrli in copyrlis:
+			tag = copyrli.find_all('a')[-1].get_text()
+			tags.append("copyright " + tag)
 
 		artists = []
 		for artistli in artistlis:
-			artist = artistli.find_all('a')[1].get_text()
+			artist = artistli.find_all('a')[-1].get_text()
 			artists.append(artist)
 
 		characters = []
 		for characterli in characterlis:
-			character = characterli.find_all('a')[1].get_text()
+			character = characterli.find_all('a')[-1].get_text()
 			characters.append(character)
-
 
 		for tag in tags:
 			if tag not in job.tags:
@@ -113,11 +121,9 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 		return img['href']
 
 	def extractMeta(self, job, soup):
-		sidebar = soup.find('div', class_='sidebar4').find('div', class_='sidebar3')
-
-		tagsection = sidebar.find('ul', id='tag-sidebar')
+		tagsection = soup.find('ul', id='tag-sidebar')
 		assert tagsection
-		infosection = sidebar.find('div', id='stats')
+		infosection = soup.find('div', id='stats')
 		assert infosection
 		self.extractTags(job, tagsection)
 		self.extractInfo(job, infosection)

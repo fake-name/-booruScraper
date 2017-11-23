@@ -54,11 +54,6 @@ class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 			character = characterli.find_all('a')[-1].get_text()
 			characters.append(character)
 
-		# print("Meta:")
-		# print("tags:", tags)
-		# print("artists:", artists)
-		# print("characters:", characters)
-
 		for tag in tags:
 			if tag not in job.tags:
 				job.tags.append(tag)

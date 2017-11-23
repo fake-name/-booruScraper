@@ -1,10 +1,10 @@
 
-import datetime
-import re
-import time
 import traceback
 import urllib.error
 import urllib.parse
+import re
+import time
+import datetime
 
 import sqlalchemy.exc
 import parsedatetime
@@ -13,14 +13,17 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
-class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
+class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 
-	pluginkey         = 'Rule34.xxx'
-	loggerpath        = "Main.Rule34-xxx"
-	content_count_max = 2580000
+	pluginkey         = 'XBooru'
+	loggerpath        = "Main.XBooru"
+	content_count_max = 710000
 
 	def __init__(self):
 		super().__init__()
+
+		# db.session = db.Session()
+
 
 	def extractTags(self, job, tagsection):
 
@@ -65,54 +68,58 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 				job.character.append(character)
 
 	def getxy(self, instr):
-		found = re.search(r"\((\d+)x(\d+)\)", instr)
+		found = re.search(r"(\d+)x(\d+)", instr)
 		x, y = found.groups()
 		return x, y
 
 	def extractInfo(self, job, infosection):
-		imgurl = None
+
 		for li in infosection.find_all("li"):
-			rawt = li.get_text()
+			rawt = li.get_text().strip()
+			if not rawt:
+				continue
+			if not ":" in rawt:
+				print("rawt: '{}'".format(rawt))
+
 			name, val = rawt.split(":", 1)
 
 			name = name.strip()
 			val = val.strip()
 
 			if name == 'Rating':
-				pass
-				# job.rating = val
+				job.rating = val
 			elif name == 'Favorites':
-				pass
-				# job.favorites = val
+				job.favorites = val
 			elif name == 'Score':
-				val = val.strip()
-				val = val.split()[0]
-				job.score = val
+				job.score = val.split()[0]
 			elif name == 'Posted':
 				cal = parsedatetime.Calendar()
-				val = val.split("by")[0]
-				tstruct, pstat = cal.parse(val)
+				itemdate =      val.split("at")[0]
+				itemdate = itemdate.split("by")[0]
+				print("itemdate", itemdate)
+				tstruct, pstat = cal.parse(itemdate)
+				print("Ret: ", pstat, tstruct)
 				assert pstat == 1 or pstat == 2 or pstat == 3
 				job.posted = datetime.datetime.fromtimestamp(time.mktime(tstruct))
 			elif name == 'Size':
-				if not '\n' in val:
-					return False
-				fsize, res = val.split("\n")
-				fsize, res = fsize.strip(), res.strip()
-				job.imgx, job.imgy = self.getxy(res)
+				job.imgx, job.imgy = self.getxy(val)
 
-				link = li.find("a")
-				if link:
-					imgurl = link['href']
 
 			elif name == 'Status':
-				pass
+				job.status = val
+				# Do not try to fetch things that are banned (e.g. removed)
+				if val == 'Banned':
+					job.state = 'removed'
+					job.err_str = 'item banned'
 			elif name in ['Approver', 'Id', 'Source', 'Uploader']:
 				pass
 			else:
 				self.log.warning("Unknown item key-value:")
-				self.log.warning("	'%s' -> '%s'", name, val)
-		return imgurl
+				self.log.warning("	'{}' -> '{}'".format(name, val))
+
+	def getImageUrl(self, soup):
+		img = soup.find('a', text='Original image')
+		return img['href']
 
 	def extractMeta(self, job, soup):
 		tagsection = soup.find('ul', id='tag-sidebar')
@@ -120,7 +127,9 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 		infosection = soup.find('div', id='stats')
 		assert infosection
 		self.extractTags(job, tagsection)
-		imgurl = self.extractInfo(job, infosection)
+		self.extractInfo(job, infosection)
+		imgurl = self.getImageUrl(soup)
+
 		return imgurl
 
 
@@ -142,31 +151,36 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 		# print(fname)
 
 	def processJob(self, job):
-		pageurl = 'https://rule34.xxx/index.php?page=post&s=view&id={}'.format(job.postid)
-		try:
-			soup = self.wg.getSoup(pageurl)
-		except urllib.error.URLError:
-			job.state = 'error'
-			job.err_str = 'failure fetching container page'
+		pageurl = 'http://tbib.org/index.php?page=post&s=view&id={}'.format(job.postid)
+		while 1:
+			try:
+				soup = self.wg.getSoup(pageurl)
+				if 'You are viewing an advertisement' in soup.get_text():
+					self.log.warning("Working around advertisement. Sleeping 10 seconds")
+					time.sleep(13)
+				else:
+					break
+			except urllib.error.URLError:
+				job.state = 'error'
+				job.err_str = 'failure fetching container page'
+				db.session.commit()
+				return
+
+		if 'Gelbooru - Image List' in soup.title.get_text():
+			self.log.warning("Image has been removed.")
+			job.state = 'removed'
+			job.err_str = 'image has been removed'
 			db.session.commit()
 			return
 
-		text = soup.get_text()
-		if 'You need a gold account to see this image.' in text:
+		if 'This post was deleted. Reason: Duplicate of' in soup.get_text():
+			self.log.warning("Image has been removed.")
 			job.state = 'removed'
-			job.err_str = 'requires account'
+			job.err_str = 'image has been removed because it was a duplicate'
 			db.session.commit()
 			return
-		if 'This post was deleted for the following reasons' in text:
-			job.state = 'removed'
-			job.err_str = 'post deleted'
-			db.session.commit()
-			return
-		if 'Save this flash' in text:
-			job.state = 'disabled'
-			job.err_str = 'content is flash .swf'
-			db.session.commit()
-			return
+
+
 		err = 0
 		while err < 5:
 			try:
@@ -178,22 +192,13 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 					job.state = 'error'
 					job.err_str = 'failed to find image!'
 				break
-			except AssertionError:
-				self.log.info("Assertion error?: '%s'", pageurl)
-				traceback.print_exc()
-				job.state = 'error'
-				job.err_str = 'Assertion failure?'
+			except sqlalchemy.exc.IntegrityError:
+				err += 1
 				db.session.rollback()
-				break
-
 			except urllib.error.URLError:
 				job.state = 'error'
 				job.err_str = 'failure fetching actual image'
 				db.session.commit()
-
-			except sqlalchemy.exc.IntegrityError:
-				err += 1
-				db.session.rollback()
 
 
 
@@ -211,7 +216,7 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 
 def run(indice):
 	print("Runner {}!".format(indice))
-	fetcher = R34xxxFetcher()
+	fetcher = GelbooruFetcher()
 	remainingTasks = True
 
 	try:
@@ -224,13 +229,10 @@ def run(indice):
 		traceback.print_exc()
 		raise
 
-
-
 if __name__ == '__main__':
 
 	import logSetup
 	logSetup.initLogging()
 
 	run(1)
-
 

@@ -27,9 +27,13 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 		characterlis = tagsection.find_all('li', class_='category-4')
 		artistlis    = tagsection.find_all('li', class_='category-1')
 		taglis       = tagsection.find_all('li', class_='category-0')
-
+		copyrlis     = tagsection.find_all('li', class_='category-3')
 
 		tags = []
+		for copyrli in copyrlis:
+			tag = copyrli.find_all('a')[-1].get_text()
+			tags.append("copyright " + tag)
+
 		for tagli in taglis:
 			tag = tagli.find('a', class_="search-tag").get_text()
 			tags.append(tag)
