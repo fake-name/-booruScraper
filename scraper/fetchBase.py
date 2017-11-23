@@ -48,14 +48,14 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 			try:
 				job = db.session.query(db.Releases)               \
 					.filter(db.Releases.source == self.pluginkey) \
-					.filter(db.Releases.dlstate == 0)             \
+					.filter(db.Releases.state == 'new')             \
 					.order_by(db.Releases.postid)                 \
 					.limit(1)
 
 				job = job.scalar()
 				if job is None:
 					return None
-				job.dlstate = 1
+				job.state = 'fetching'
 				db.session.commit()
 				return job
 			except sqlalchemy.exc.DatabaseError:
@@ -125,10 +125,10 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 	def resetDlstate(self):
 
 		sess = db.session()
-		tmp = sess.query(db.Releases)                     \
-			.filter(db.Releases.dlstate == 1)             \
-			.filter(db.Releases.source == self.pluginkey) \
-			.update({db.Releases.dlstate : 0})            \
+		tmp = sess.query(db.Releases)                                                                 \
+			.filter(db.Releases.state == 'fetching' or db.Releases.state == 'processing')             \
+			.filter(db.Releases.source == self.pluginkey)                                             \
+			.update({db.Releases.state : 'new'})
 
 		sess.commit()
 
@@ -140,7 +140,7 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 		for x in range(self.content_count_max, 0, UPSERT_STEP * -1):
 
 			self.log.info("[%s] - Building insert data structure %s -> %s", self.pluginkey, x, x+UPSERT_STEP)
-			dat = [{"dlstate" : 0, "postid" : x, "source" : self.pluginkey} for x in range(x, x+UPSERT_STEP)]
+			dat = [{"dlstate" : 'new', "postid" : x, "source" : self.pluginkey} for x in range(x, x+UPSERT_STEP)]
 			self.log.info("[%s] - Building insert query", self.pluginkey)
 			q = insert(db.Releases).values(dat)
 			q = q.on_conflict_do_nothing()

@@ -24,25 +24,6 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 		# db.session = db.Session()
 
-	def get_job(self):
-		while 1:
-			try:
-				job = db.session.query(db.Releases)   \
-					.filter(db.Releases.dlstate == 0) \
-					.order_by(db.Releases.postid)     \
-					.limit(1)                         \
-					.one()
-				if job == None:
-					return None
-				job.dlstate = 1
-				db.session.commit()
-				return job
-			except sqlalchemy.exc.DatabaseError:
-				self.log.warning("Error when getting job. Probably a concurrency issue.")
-				self.log.warning("Trying again.")
-				for line in traceback.format_exc().split("\n"):
-					self.log.warning(line)
-				db.session.rollback()
 
 	def extractTags(self, job, tagsection):
 
@@ -119,7 +100,8 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 				job.status = val
 				# Do not try to fetch things that are banned (e.g. removed)
 				if val == 'Banned':
-					job.dlstate=-2
+					job.state = 'removed'
+					job.err_str = 'item banned'
 			elif name in ['Approver', 'Id', 'Source', 'Uploader']:
 				pass
 			else:
@@ -157,7 +139,7 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 		job.filename = fname
 		job.filepath = fpath
-		job.dlstate  = 2
+		job.state    = 'complete'
 		db.session.commit()
 		# print(fname)
 
@@ -172,27 +154,25 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 				else:
 					break
 			except urllib.error.URLError:
-				job.dlstate=-1
+				job.state = 'error'
+				job.err_str = 'failure fetching container page'
 				db.session.commit()
 				return
 
 		if 'Gelbooru - Image List' in soup.title.get_text():
 			self.log.warning("Image has been removed.")
-			job.dlstate=-4
+			job.state = 'removed'
+			job.err_str = 'image has been removed'
 			db.session.commit()
 			return
 
 		if 'This post was deleted. Reason: Duplicate of' in soup.get_text():
 			self.log.warning("Image has been removed.")
-			job.dlstate=-6
+			job.state = 'removed'
+			job.err_str = 'image has been removed because it was a duplicate'
 			db.session.commit()
 			return
 
-		# text = soup.get_text()
-		# if 'You need a gold account to see this image.' in text:
-		# 	job.dlstate=-3
-		# 	db.session.commit()
-		# 	return
 
 		err = 0
 		while err < 5:
@@ -202,13 +182,15 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 					self.fetchImage(job, imgurl, pageurl)
 				else:
 					self.log.info("No image found for URL: '%s'", pageurl)
-					job.dlstate=-5
+					job.state = 'error'
+					job.err_str = 'failed to find image!'
 				break
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
 			except urllib.error.URLError:
-				job.dlstate=-8
+				job.state = 'error'
+				job.err_str = 'failure fetching actual image'
 				db.session.commit()
 
 

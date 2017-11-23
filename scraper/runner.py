@@ -38,23 +38,28 @@ class RunEngine(object):
 
 		self.log.info("Creating run contexts")
 
-		threads = []
 
-		try:
-			for plugin in PLUGIN_CLASSES:
-				th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
-				th.start()
-				threads.append(th)
+		for plugin in PLUGIN_CLASSES:
+			plugin.run_scraper()
+
+		# threads = []
+		# try:
+		# 	for plugin in PLUGIN_CLASSES:
+		# 		th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
+		# 		threads.append(th)
 
 
-			self.log.info("Waiting for workers to complete.")
-			for thread in threads:
-				thread.join()
-		except KeyboardInterrupt:
-			self.log.info("Waiting for executor.")
-			scraper.runstate.run = False
-			for thread in threads:
-				thread.join()
+		# 	for thread in threads:
+		# 		thread.start()
+
+		# 	self.log.info("Waiting for workers to complete.")
+		# 	for thread in threads:
+		# 		thread.join()
+		# except KeyboardInterrupt:
+		# 	self.log.info("Waiting for executor.")
+		# 	scraper.runstate.run = False
+		# 	for thread in threads:
+		# 		thread.join()
 
 def go():
 	instance = RunEngine(THREADS)

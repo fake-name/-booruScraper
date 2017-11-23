@@ -94,7 +94,8 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 				job.status = val
 				# Do not try to fetch things that are banned (e.g. removed)
 				if val == 'Banned':
-					job.dlstate=-2
+					job.state = 'removed'
+					job.err_str = 'item banned'
 			elif name in ['Approver', 'ID', 'Source', 'Uploader']:
 				pass
 			else:
@@ -125,7 +126,7 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 		job.filename = fname
 		job.filepath = fpath
-		job.dlstate  = 2
+		job.state    = 'complete'
 		db.session.commit()
 		# print(fname)
 
@@ -134,21 +135,25 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 		try:
 			soup = self.wg.getSoup(pageurl)
 		except urllib.error.URLError:
-			job.dlstate=-1
+			job.state = 'error'
+			job.err_str = 'failure fetching container page'
 			db.session.commit()
 			return
 
 		text = soup.get_text()
 		if 'You need a gold account to see this image.' in text:
-			job.dlstate=-3
+			job.state = 'removed'
+			job.err_str = 'requires account'
 			db.session.commit()
 			return
 		if 'This post was deleted for the following reasons' in text:
-			job.dlstate=-4
+			job.state = 'removed'
+			job.err_str = 'post deleted'
 			db.session.commit()
 			return
 		if 'Save this flash' in text:
-			job.dlstate=-9
+			job.state = 'disabled'
+			job.err_str = 'content is flash .swf'
 			db.session.commit()
 			return
 		err = 0
@@ -159,11 +164,17 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 					self.fetchImage(job, imgurl, pageurl)
 				else:
 					self.log.info("No image found for URL: '%s'", pageurl)
-					job.dlstate=-5
+					job.state = 'error'
+					job.err_str = 'failed to find image!'
 				break
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
+			except urllib.error.URLError:
+				job.state = 'error'
+				job.err_str = 'failure fetching actual image'
+				db.session.commit()
+
 
 
 

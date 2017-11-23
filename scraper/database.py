@@ -23,8 +23,12 @@ from sqlalchemy.ext.associationproxy import association_proxy
 
 # Patch in knowledge of the citext type, so it reflects properly.
 from sqlalchemy.dialects.postgresql.base import ischema_names
+from sqlalchemy.dialects.postgresql import ENUM
+
 import citext
 ischema_names['citext'] = citext.CIText
+dlstate_enum   = ENUM('new', 'fetching', 'processing', 'complete', 'error', 'removed', 'disabled', name='dlstate_enum')
+
 
 from settings import DATABASE_IP            as C_DATABASE_IP
 from settings import DATABASE_DB_NAME       as C_DATABASE_DB_NAME
@@ -166,7 +170,8 @@ def file_creator(filetups):
 class Releases(Base):
 	__tablename__ = 'db_releases'
 	id          = Column(Integer, primary_key=True)
-	dlstate     = Column(Integer, nullable=False, index=True)
+	state       = Column(dlstate_enum, nullable=False, index=True, default='new')
+	err_str     = Column(Text)
 	postid      = Column(Integer, nullable=False, index=True)
 
 	source      = Column(citext.CIText, nullable=False, index=True)
