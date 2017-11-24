@@ -4,6 +4,9 @@
 class WebGetException(Exception):
 	pass
 
+class RedirectedError(WebGetException):
+	pass
+
 class ContentTypeError(WebGetException):
 	pass
 

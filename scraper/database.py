@@ -38,7 +38,7 @@ from settings import DATABASE_PASS          as C_DATABASE_PASS
 SQLALCHEMY_DATABASE_URI = 'postgresql://{user}:{passwd}@{host}:5432/{database}'.format(user=C_DATABASE_USER, passwd=C_DATABASE_PASS, host=C_DATABASE_IP, database=C_DATABASE_DB_NAME)
 
 # I was having issues with timeouts because the default connection pool is 5 connections.
-engine = create_engine(SQLALCHEMY_DATABASE_URI, pool_size = 20)
+engine = create_engine(SQLALCHEMY_DATABASE_URI, pool_size = 20, isolation_level='REPEATABLE_READ')
 
 SessionFactory = sessionmaker(bind=engine)
 session = scoped_session(SessionFactory)

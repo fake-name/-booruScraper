@@ -13,6 +13,8 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
+import util.WebRequest
+
 class TbibFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'TBIB'
@@ -111,6 +113,7 @@ class TbibFetcher(scraper.fetchBase.AbstractFetcher):
 				if val == 'Banned':
 					job.state = 'removed'
 					job.err_str = 'item banned'
+					self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			elif name in ['Approver', 'Id', 'Source', 'Uploader']:
 				pass
 			else:
@@ -156,15 +159,22 @@ class TbibFetcher(scraper.fetchBase.AbstractFetcher):
 		pageurl = 'http://tbib.org/index.php?page=post&s=view&id={}'.format(job.postid)
 		while 1:
 			try:
-				soup = self.wg.getSoup(pageurl)
+				soup = self.wg.getSoupNoRedirects(pageurl)
 				if 'You are viewing an advertisement' in soup.get_text():
 					self.log.warning("Working around advertisement. Sleeping 10 seconds")
 					time.sleep(13)
 				else:
 					break
-			except urllib.error.URLError:
+			except util.WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching container page'
+				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
+				db.session.commit()
+				return
+			except util.WebRequest.RedirectedError:
+				job.state = 'error'
+				job.err_str = 'Content page redirected'
+				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				db.session.commit()
 				return
 
@@ -172,6 +182,7 @@ class TbibFetcher(scraper.fetchBase.AbstractFetcher):
 			self.log.warning("Image has been removed.")
 			job.state = 'removed'
 			job.err_str = 'image has been removed'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 
@@ -179,6 +190,7 @@ class TbibFetcher(scraper.fetchBase.AbstractFetcher):
 			self.log.warning("Image has been removed.")
 			job.state = 'removed'
 			job.err_str = 'image has been removed because it was a duplicate'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 
@@ -193,13 +205,15 @@ class TbibFetcher(scraper.fetchBase.AbstractFetcher):
 					self.log.info("No image found for URL: '%s'", pageurl)
 					job.state = 'error'
 					job.err_str = 'failed to find image!'
+					self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				break
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
-			except urllib.error.URLError:
+			except util.WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching actual image'
+				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				db.session.commit()
 
 

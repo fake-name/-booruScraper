@@ -13,6 +13,8 @@ import scraper.runstate
 import scraper.fetchBase
 import scraper.database as db
 
+import util.WebRequest
+
 class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'e621'
@@ -154,9 +156,10 @@ class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 		pageurl = 'https://e621.net/post/show/{}'.format(job.postid)
 		try:
 			soup = self.wg.getSoup(pageurl)
-		except urllib.error.URLError:
+		except util.WebRequest.WebGetException:
 			job.state = 'error'
 			job.err_str = 'failure fetching container page'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 
@@ -164,16 +167,19 @@ class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 		if 'You need a gold account to see this image.' in text:
 			job.state = 'removed'
 			job.err_str = 'requires account'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 		if 'This post was deleted for the following reasons' in text:
 			job.state = 'removed'
 			job.err_str = 'post deleted'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 		if 'Save this flash' in text:
 			job.state = 'disabled'
 			job.err_str = 'content is flash .swf'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 		err = 0
@@ -186,12 +192,14 @@ class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 					self.log.info("No image found for URL: '%s'", pageurl)
 					job.state = 'error'
 					job.err_str = 'failed to find image!'
+					self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				break
 			except AssertionError:
 				self.log.info("Assertion error?: '%s'", pageurl)
 				traceback.print_exc()
 				job.state = 'error'
 				job.err_str = 'Assertion failure?'
+				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				db.session.rollback()
 				break
 

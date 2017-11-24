@@ -15,26 +15,24 @@ import scraper.modules.tbibFetch
 import scraper.modules.xbooruFetch
 
 
-# THREADS = 6
-THREADS = 15
-
 
 PLUGIN_CLASSES = [
-	scraper.modules.danbooruFetch.DanbooruFetcher,
-	# scraper.modules.gelbooruFetch.GelbooruFetcher,
-	scraper.modules.r34xxxScrape.R34xxxFetcher,
-	scraper.modules.KonaChanFetch.KonaChanFetcher,
+
+	# Ok:
 	scraper.modules.e621Scrape.E621Fetcher,
+	scraper.modules.KonaChanFetch.KonaChanFetcher,
+	scraper.modules.r34xxxScrape.R34xxxFetcher,
+	scraper.modules.danbooruFetch.DanbooruFetcher,
 	scraper.modules.tbibFetch.TbibFetcher,
 	scraper.modules.xbooruFetch.XBooruFetcher,
+
+	# Fucked:
+	# scraper.modules.gelbooruFetch.GelbooruFetcher,
 ]
 
 class RunEngine(object):
-	def __init__(self, worker_count):
+	def __init__(self):
 		self.log = logging.getLogger("Main.Runner")
-		self.workers = worker_count
-
-
 
 	def run(self):
 		self.log.info("Inserting start URLs")
@@ -43,29 +41,29 @@ class RunEngine(object):
 		self.log.info("Creating run contexts")
 
 
-		for plugin in PLUGIN_CLASSES:
-			plugin.run_scraper()
+		# for plugin in PLUGIN_CLASSES:
+		# 	plugin.run_scraper()
 
-		# threads = []
-		# try:
-		# 	for plugin in PLUGIN_CLASSES:
-		# 		th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
-		# 		threads.append(th)
+		threads = []
+		try:
+			for plugin in PLUGIN_CLASSES:
+				th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
+				threads.append(th)
 
 
-		# 	for thread in threads:
-		# 		thread.start()
+			for thread in threads:
+				thread.start()
 
-		# 	self.log.info("Waiting for workers to complete.")
-		# 	for thread in threads:
-		# 		thread.join()
-		# except KeyboardInterrupt:
-		# 	self.log.info("Waiting for executor.")
-		# 	scraper.runstate.run = False
-		# 	for thread in threads:
-		# 		thread.join()
+			self.log.info("Waiting for workers to complete.")
+			for thread in threads:
+				thread.join()
+		except KeyboardInterrupt:
+			self.log.info("Waiting for executor.")
+			scraper.runstate.run = False
+			for thread in threads:
+				thread.join()
 
 def go():
-	instance = RunEngine(THREADS)
+	instance = RunEngine()
 	instance.run()
 

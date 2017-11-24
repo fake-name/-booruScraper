@@ -9,6 +9,8 @@ import hashlib
 import concurrent.futures
 
 import sqlalchemy.exc
+from sqlalchemy import desc
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 import settings
@@ -44,13 +46,45 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 
 	def get_job(self):
+
+		session = db.session()
+		print("Cursor: ", session)
 		while 1:
+			self.log.info("Getting job")
 			try:
+
+				raw_query = '''
+						UPDATE
+						    db_releases
+						SET
+						    state = 'fetching'
+						WHERE
+						    db_releases.id in (
+						        SELECT
+						            db_releases.id
+						        FROM
+						            db_releases
+						        WHERE
+						            db_releases.state = 'new'
+						        AND
+						           source = :source
+						        ORDER BY
+						            db_releases.postid ASC
+						        LIMIT 1
+						    )
+						AND
+						    db_releases.state = 'new'
+						RETURNING
+						    db_releases.id;
+					'''
+
+				rids = session.execute(text(raw_query), {'source' : self.pluginkey})
+				ridl = list(rids)
+				rid = ridl[0][0]
+
+
 				job = db.session.query(db.Releases)               \
-					.filter(db.Releases.source == self.pluginkey) \
-					.filter(db.Releases.state == 'new')             \
-					.order_by(db.Releases.postid)                 \
-					.limit(1)
+					.filter(db.Releases.id == rid)
 
 				job = job.scalar()
 				if job is None:
@@ -58,7 +92,9 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 				job.state = 'fetching'
 				db.session.commit()
 				return job
-			except sqlalchemy.exc.DatabaseError:
+			except sqlalchemy.exc.OperationalError as e:
+				db.session.rollback()
+			except sqlalchemy.exc.DatabaseError as e:
 				self.log.warning("Error when getting job. Probably a concurrency issue.")
 				self.log.warning("Trying again.")
 				for line in traceback.format_exc().split("\n"):
@@ -120,14 +156,21 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 
 	def run_worker(self):
-		pass
+		try:
+			while self.retreiveItem():
+				pass
+		except Exception as e:
+			self.log.error("Worker thread had exception")
+			for line in traceback.format_exc().split("\n"):
+				self.log.error(line)
+
 
 	def resetDlstate(self):
 
 		sess = db.session()
-		tmp = sess.query(db.Releases)                                                                 \
-			.filter(db.Releases.state == 'fetching' or db.Releases.state == 'processing')             \
-			.filter(db.Releases.source == self.pluginkey)                                             \
+		sess.query(db.Releases)                                                           \
+			.filter(db.Releases.state == 'fetching' or db.Releases.state == 'processing') \
+			.filter(db.Releases.source == self.pluginkey)                                 \
 			.update({db.Releases.state : 'new'})
 
 		sess.commit()

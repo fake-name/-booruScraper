@@ -5,5 +5,6 @@ from .WebRequestClass import WebGetRobust
 from .Exceptions import WebGetException
 from .Exceptions import ContentTypeError
 from .Exceptions import ArgumentError
+from .Exceptions import RedirectedError
 from .Exceptions import FetchFailureError
 

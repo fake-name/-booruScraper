@@ -13,6 +13,8 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
+import util.WebRequest
+
 class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'XBooru'
@@ -111,6 +113,7 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 				if val == 'Banned':
 					job.state = 'removed'
 					job.err_str = 'item banned'
+					self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			elif name in ['Approver', 'Id', 'Source', 'Uploader']:
 				pass
 			else:
@@ -160,9 +163,10 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 					time.sleep(13)
 				else:
 					break
-			except urllib.error.URLError:
+			except util.WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching container page'
+				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				db.session.commit()
 				return
 
@@ -170,6 +174,7 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 			self.log.warning("Image has been removed.")
 			job.state = 'removed'
 			job.err_str = 'image has been removed'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 
@@ -177,6 +182,7 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 			self.log.warning("Image has been removed.")
 			job.state = 'removed'
 			job.err_str = 'image has been removed because it was a duplicate'
+			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
 
@@ -191,13 +197,15 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 					self.log.info("No image found for URL: '%s'", pageurl)
 					job.state = 'error'
 					job.err_str = 'failed to find image!'
+					self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				break
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
-			except urllib.error.URLError:
+			except util.WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching actual image'
+				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				db.session.commit()
 
 
