@@ -48,8 +48,9 @@ class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 
 		artists = []
 		for artistli in artistlis:
-			artist = artistli.find_all('a')[-1].get_text()
-			artists.append(artist)
+			if artistli.find_all('a'):
+				artist = artistli.find_all('a')[-1].get_text()
+				artists.append(artist)
 
 		characters = []
 		for characterli in characterlis:
@@ -170,7 +171,7 @@ class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
-		if 'This post was deleted for the following reasons' in text:
+		if 'This post was deleted by' in text:
 			job.state = 'removed'
 			job.err_str = 'post deleted'
 			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
@@ -242,17 +243,24 @@ def run(indice):
 
 def test():
 	fetcher = E621Fetcher()
-	soup = fetcher.wg.getSoup("https://e621.net/post/show/1190129")
-	fetcher.extractMeta(None, soup)
+	soup = fetcher.wg.getSoup("https://e621.net/post/show/28024")
+
+	tmp = lambda: None
+	tmp.tags = []
+	tmp.character = []
+	tmp.artist = []
+	tmp.file = []
+
+	fetcher.extractMeta(tmp, soup)
 
 
 
 if __name__ == '__main__':
 
-	import logSetup
-	logSetup.initLogging()
+	import util.logSetup
+	util.logSetup.initLogging()
 
-	# test()
-	run(1)
+	test()
+	# run(1)
 
 

@@ -127,10 +127,17 @@ class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 
 	def extractImageUrl(self, job, sidebar):
 		imgurl_a = sidebar.find("a", class_='original-file-unchanged')
+		imgurl_s = sidebar.find("a", class_='original-file-changed')
 		if imgurl_a:
 			imgurl = imgurl_a['href']
-			print("ImageURL:", (imgurl_a['href'], imgurl_a))
-
+			self.log.info("ImageURL: (%s -> %s)", imgurl_a['href'], imgurl_a)
+		elif imgurl_s:
+			# Apparently some times they don't have an unchanged variant at all
+			imgurl = imgurl_s['href']
+			self.log.info("ImageURL: (%s -> %s)", imgurl_s['href'], imgurl_s)
+		else:
+			self.log.error("Missing image url!")
+			self.log.error("Source url id = %s", 'https://konachan.com/post/show/{}'.format(job.postid))
 		return imgurl
 
 	def extractMeta(self, job, soup):
@@ -178,7 +185,7 @@ class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 			db.session.commit()
 			return
-		if 'This post was deleted for the following reasons' in text:
+		if 'This post was deleted.' in text:
 			job.state = 'removed'
 			job.err_str = 'post deleted'
 			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
@@ -229,6 +236,20 @@ class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 
 
 
+def test():
+	fetcher = KonaChanFetcher()
+	soup = fetcher.wg.getSoup("https://konachan.com/post/show/5103")
+
+	tmp = lambda: None
+	tmp.postid = 5103
+	tmp.tags = []
+	tmp.character = []
+	tmp.artist = []
+	tmp.file = []
+
+	fetcher.extractMeta(tmp, soup)
+
+
 def run(indice):
 	print("Runner {}!".format(indice))
 	fetcher = KonaChanFetcher()
@@ -246,8 +267,9 @@ def run(indice):
 
 if __name__ == '__main__':
 
-	import logSetup
-	logSetup.initLogging()
+	import util.logSetup
+	util.logSetup.initLogging()
 
-	run(1)
+	test()
+	# run(1)
 

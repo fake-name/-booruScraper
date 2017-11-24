@@ -2,6 +2,7 @@ import logging
 
 
 import threading
+import multiprocessing
 
 import scraper.database as db
 import scraper.runstate
