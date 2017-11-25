@@ -43,6 +43,7 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 		self.log = logging.getLogger(self.loggerpath)
 		self.wg = util.WebRequest.WebGetRobust(logPath=self.loggerpath+".Web")
 
+		self.jobs_queued = []
 
 
 	def get_job(self):
@@ -52,35 +53,39 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 		while 1:
 			self.log.info("Getting job")
 			try:
+				if not self.jobs_queued:
+					raw_query = '''
+							UPDATE
+							    db_releases
+							SET
+							    state = 'fetching'
+							WHERE
+							    db_releases.id in (
+							        SELECT
+							            db_releases.id
+							        FROM
+							            db_releases
+							        WHERE
+							            db_releases.state = 'new'
+							        AND
+							           source = :source
+							        ORDER BY
+							            db_releases.postid ASC
+							        LIMIT 500
+							    )
+							AND
+							    db_releases.state = 'new'
+							RETURNING
+							    db_releases.id;
+						'''
 
-				raw_query = '''
-						UPDATE
-						    db_releases
-						SET
-						    state = 'fetching'
-						WHERE
-						    db_releases.id in (
-						        SELECT
-						            db_releases.id
-						        FROM
-						            db_releases
-						        WHERE
-						            db_releases.state = 'new'
-						        AND
-						           source = :source
-						        ORDER BY
-						            db_releases.postid ASC
-						        LIMIT 1
-						    )
-						AND
-						    db_releases.state = 'new'
-						RETURNING
-						    db_releases.id;
-					'''
+					rids = session.execute(text(raw_query), {'source' : self.pluginkey})
+					ridl = list(rids)
+					self.jobs_queued = [tmp[0] for tmp in ridl]
 
-				rids = session.execute(text(raw_query), {'source' : self.pluginkey})
-				ridl = list(rids)
-				rid = ridl[0][0]
+				assert self.jobs_queued
+
+				rid = self.jobs_queued.pop()
 
 
 				job = db.session.query(db.Releases)               \

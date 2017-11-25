@@ -5,11 +5,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import scoped_session
 from sqlalchemy import Table
+from sqlalchemy import Index
 
 from sqlalchemy import Column
 from sqlalchemy import Integer
 from sqlalchemy import BigInteger
 from sqlalchemy import Text
+from sqlalchemy import text
 from sqlalchemy import Float
 from sqlalchemy import Boolean
 from sqlalchemy import DateTime
@@ -114,14 +116,19 @@ class Artist(Base):
 
 class Files(Base):
 	__tablename__ = 'db_files'
-	id          = Column(Integer, primary_key=True)
+	id          = Column(BigInteger, primary_key=True)
 
 	filepath    = Column(citext.CIText(), nullable=False)
 	fhash       = Column(Text, nullable=False)
 
+	phash       = Column(BigInteger)
+	imgx        = Column(Integer)
+	imgy        = Column(Integer)
+
 	__table_args__ = (
 		UniqueConstraint('filepath'),
 		UniqueConstraint('fhash'),
+		Index('phash_bktree_idx', 'phash', postgresql_using="spgist")
 		)
 
 def tag_creator(tag):
@@ -204,6 +211,7 @@ class Releases(Base):
 
 	__table_args__ = (
 		UniqueConstraint('postid', 'source'),
+		Index('db_releases_source_state_id_idx', 'source', 'state', 'id')
 		)
 
 
