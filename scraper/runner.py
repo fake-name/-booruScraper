@@ -45,24 +45,24 @@ class RunEngine(object):
 			instance = plugin()
 			instance.do_upsert()
 
-		# threads = []
-		# try:
-		# 	for plugin in PLUGIN_CLASSES:
-		# 		th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
-		# 		threads.append(th)
+		threads = []
+		try:
+			for plugin in PLUGIN_CLASSES:
+				th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
+				threads.append(th)
 
 
-		# 	for thread in threads:
-		# 		thread.start()
+			for thread in threads:
+				thread.start()
 
-		# 	self.log.info("Waiting for workers to complete.")
-		# 	for thread in threads:
-		# 		thread.join()
-		# except KeyboardInterrupt:
-		# 	self.log.info("Waiting for executor.")
-		# 	scraper.runstate.run = False
-		# 	for thread in threads:
-		# 		thread.join()
+			self.log.info("Waiting for workers to complete.")
+			for thread in threads:
+				thread.join()
+		except KeyboardInterrupt:
+			self.log.info("Waiting for executor.")
+			scraper.runstate.run = False
+			for thread in threads:
+				thread.join()
 
 def go():
 	instance = RunEngine()

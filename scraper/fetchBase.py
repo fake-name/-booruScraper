@@ -187,7 +187,9 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 		sess = db.session()
 		total_changes = 0
 
-		pbar = tqdm.tqdm(range(self.get_content_count_max(), -1, UPSERT_STEP * -1))
+		item_count = self.get_content_count_max()
+		self.log.info("Max source items = %s", item_count)
+		pbar = tqdm.tqdm(range(item_count + UPSERT_STEP, -1, UPSERT_STEP * -1))
 		for x in pbar:
 
 			# self.log.info("[%s] - Building insert data structure %s -> %s", self.pluginkey, x, x+UPSERT_STEP)
@@ -205,14 +207,13 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 			if changes:
 				sess.commit()
 			pbar.set_description("Changes: %s (%s)" % (changes, total_changes))
-			# if not changes:
-			# 	break
+			if not changes:
+				break
 		self.log.info("[%s] - Done.", self.pluginkey)
 
 
 	def __go(self):
 		self.resetDlstate()
-		self.do_upsert()
 
 		executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_threads)
 		try:
