@@ -13,16 +13,27 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
-import util.WebRequest
+import WebRequest
 
 class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'KonaChan'
 	loggerpath        = "Main.KonaChan"
-	content_count_max = 260000
 
 	def __init__(self):
 		super().__init__()
+
+
+	def get_content_count_max(self):
+		soup = self.wg.getSoup('https://konachan.com/post')
+
+		thumbs = soup.find_all('li', class_=re.compile("creator-id-"))
+		tids = [tmp.get("id", "").strip("p") for tmp in thumbs]
+		tids = [int(tmp) for tmp in tids if tmp]
+		maxid = max(tids)
+
+		return maxid
+
 
 	def extractTags(self, job, tagsection):
 
@@ -171,7 +182,7 @@ class KonaChanFetcher(scraper.fetchBase.AbstractFetcher):
 		pageurl = 'https://konachan.com/post/show/{}'.format(job.postid)
 		try:
 			soup = self.wg.getSoup(pageurl)
-		except util.WebRequest.WebGetException:
+		except WebRequest.WebGetException:
 			job.state = 'error'
 			job.err_str = 'failure fetching container page'
 			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)

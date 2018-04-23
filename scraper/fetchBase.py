@@ -8,13 +8,14 @@ import abc
 import hashlib
 import concurrent.futures
 
+import tqdm
 import sqlalchemy.exc
 from sqlalchemy import desc
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 import settings
-import util.WebRequest
+import WebRequest
 import scraper.runstate
 import scraper.database as db
 
@@ -22,8 +23,8 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 	worker_threads = 6
 
-	@abc.abstractproperty
-	def content_count_max(self):
+	@abc.abstractmethod
+	def get_content_count_max(self, job):
 		pass
 
 	@abc.abstractproperty
@@ -41,7 +42,7 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 	def __init__(self):
 		self.log = logging.getLogger(self.loggerpath)
-		self.wg = util.WebRequest.WebGetRobust(logPath=self.loggerpath+".Web")
+		self.wg = WebRequest.WebGetRobust(logPath=self.loggerpath+".Web")
 
 		self.jobs_queued = []
 
@@ -182,25 +183,30 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 
 	def do_upsert(self):
-		UPSERT_STEP = 10000
+		UPSERT_STEP = 1000
 		sess = db.session()
+		total_changes = 0
 
-		for x in range(self.content_count_max, 0, UPSERT_STEP * -1):
+		pbar = tqdm.tqdm(range(self.get_content_count_max(), -1, UPSERT_STEP * -1))
+		for x in pbar:
 
-			self.log.info("[%s] - Building insert data structure %s -> %s", self.pluginkey, x, x+UPSERT_STEP)
+			# self.log.info("[%s] - Building insert data structure %s -> %s", self.pluginkey, x, x+UPSERT_STEP)
 			dat = [{"state" : 'new', "postid" : x, "source" : self.pluginkey} for x in range(x, x+UPSERT_STEP)]
-			self.log.info("[%s] - Building insert query", self.pluginkey)
+			# self.log.info("[%s] - Building insert query", self.pluginkey)
 			q = insert(db.Releases).values(dat)
 			q = q.on_conflict_do_nothing()
-			self.log.info("[%s] - Built. Doing insert.", self.pluginkey)
+			# self.log.info("[%s] - Built. Doing insert.", self.pluginkey)
 			ret = sess.execute(q)
 
 			changes = ret.rowcount
-			self.log.info("[%s] - Changed rows: %s", self.pluginkey, changes)
-			sess.commit()
-
-			if not changes:
-				break
+			total_changes += changes
+			# if changes != UPSERT_STEP:
+			# 	self.log.info("[%s] - Changed rows: %s", self.pluginkey, changes)
+			if changes:
+				sess.commit()
+			pbar.set_description("Changes: %s (%s)" % (changes, total_changes))
+			# if not changes:
+			# 	break
 		self.log.info("[%s] - Done.", self.pluginkey)
 
 

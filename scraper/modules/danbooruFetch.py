@@ -13,16 +13,27 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
-import util.WebRequest
+import WebRequest
 
 class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'Danbooru'
 	loggerpath        = "Main.Danbooru"
-	content_count_max = 2950000
 
 	def __init__(self):
 		super().__init__()
+
+
+	def get_content_count_max(self):
+		soup = self.wg.getSoup('https://danbooru.donmai.us/')
+
+		thumbs = soup.find_all('article', class_='post-preview')
+		tids = [tmp.get("id", "").strip("post_") for tmp in thumbs]
+		tids = [int(tmp) for tmp in tids if tmp]
+		maxid = max(tids)
+
+		return maxid
+
 
 	def extractTags(self, job, tagsection):
 
@@ -141,7 +152,7 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 		pageurl = 'https://danbooru.donmai.us/posts/{}'.format(job.postid)
 		try:
 			soup = self.wg.getSoup(pageurl)
-		except util.WebRequest.WebGetException:
+		except WebRequest.WebGetException:
 			job.state = 'error'
 			job.err_str = 'failure fetching container page'
 			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
@@ -185,7 +196,7 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
-			except util.WebRequest.WebGetException:
+			except WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching actual image'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)

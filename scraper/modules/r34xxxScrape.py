@@ -13,16 +13,26 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
-import util.WebRequest
+import WebRequest
 
 class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'Rule34.xxx'
 	loggerpath        = "Main.Rule34-xxx"
-	content_count_max = 2580000
 
 	def __init__(self):
 		super().__init__()
+
+
+	def get_content_count_max(self):
+		soup = self.wg.getSoup('https://rule34.xxx/index.php?page=post&s=list')
+
+		thumbs = soup.find_all('span', class_='thumb')
+		tids = [tmp.get("id", "").strip("s") for tmp in thumbs]
+		tids = [int(tmp) for tmp in tids if tmp]
+		maxid = max(tids)
+		return maxid
+
 
 	def extractTags(self, job, tagsection):
 
@@ -153,13 +163,13 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 					time.sleep(13)
 				else:
 					break
-			except util.WebRequest.WebGetException:
+			except WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching container page'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				db.session.commit()
 				return
-			except util.WebRequest.RedirectedError:
+			except WebRequest.RedirectedError:
 				job.state = 'error'
 				job.err_str = 'Content page redirected'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
@@ -206,7 +216,7 @@ class R34xxxFetcher(scraper.fetchBase.AbstractFetcher):
 				db.session.rollback()
 				break
 
-			except util.WebRequest.WebGetException:
+			except WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching actual image'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)

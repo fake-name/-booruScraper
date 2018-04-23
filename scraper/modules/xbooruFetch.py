@@ -13,18 +13,26 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
-import util.WebRequest
+import WebRequest
 
 class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'XBooru'
 	loggerpath        = "Main.XBooru"
-	content_count_max = 710000
 
 	def __init__(self):
 		super().__init__()
 
 		# db.session = db.Session()
+
+	def get_content_count_max(self):
+		soup = self.wg.getSoup('https://xbooru.com/index.php?page=post&s=list')
+
+		thumbs = soup.find_all('span', class_='thumb')
+		tids = [tmp.get("id", "").strip("s") for tmp in thumbs]
+		tids = [int(tmp) for tmp in tids if tmp]
+		maxid = max(tids)
+		return maxid
 
 
 	def extractTags(self, job, tagsection):
@@ -154,7 +162,7 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 		# print(fname)
 
 	def processJob(self, job):
-		pageurl = 'http://tbib.org/index.php?page=post&s=view&id={}'.format(job.postid)
+		pageurl = 'https://xbooru.com/index.php?page=post&s=view&id={}'.format(job.postid)
 		while 1:
 			try:
 				soup = self.wg.getSoup(pageurl)
@@ -163,14 +171,14 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 					time.sleep(13)
 				else:
 					break
-			except util.WebRequest.WebGetException:
+			except WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching container page'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
 				db.session.commit()
 				return
 
-		if 'Gelbooru - Image List' in soup.title.get_text():
+		if soup.title.get_text() == 'Xbooru ':
 			self.log.warning("Image has been removed.")
 			job.state = 'removed'
 			job.err_str = 'image has been removed'
@@ -202,7 +210,7 @@ class XBooruFetcher(scraper.fetchBase.AbstractFetcher):
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
-			except util.WebRequest.WebGetException:
+			except WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching actual image'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)

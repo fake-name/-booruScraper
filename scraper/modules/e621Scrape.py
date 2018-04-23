@@ -13,16 +13,25 @@ import scraper.runstate
 import scraper.fetchBase
 import scraper.database as db
 
-import util.WebRequest
+import WebRequest
 
 class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'e621'
 	loggerpath        = "Main.e621"
-	content_count_max = 1390000
 
 	def __init__(self):
 		super().__init__()
+
+	def get_content_count_max(self):
+		soup = self.wg.getSoup('https://e621.net/post')
+
+		thumbs = soup.find_all('span', class_='thumb')
+		tids = [tmp.get("id", "").strip("p") for tmp in thumbs]
+		tids = [int(tmp) for tmp in tids if tmp]
+		maxid = max(tids)
+
+		return maxid
 
 	def extractTags(self, job, tagsection):
 
@@ -157,7 +166,7 @@ class E621Fetcher(scraper.fetchBase.AbstractFetcher):
 		pageurl = 'https://e621.net/post/show/{}'.format(job.postid)
 		try:
 			soup = self.wg.getSoup(pageurl)
-		except util.WebRequest.WebGetException:
+		except WebRequest.WebGetException:
 			job.state = 'error'
 			job.err_str = 'failure fetching container page'
 			self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)

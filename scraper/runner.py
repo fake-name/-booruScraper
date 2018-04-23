@@ -1,6 +1,5 @@
 import logging
 
-
 import threading
 import multiprocessing
 
@@ -21,9 +20,9 @@ PLUGIN_CLASSES = [
 
 	# Ok:
 	scraper.modules.e621Scrape.E621Fetcher,
+	scraper.modules.danbooruFetch.DanbooruFetcher,
 	scraper.modules.KonaChanFetch.KonaChanFetcher,
 	scraper.modules.r34xxxScrape.R34xxxFetcher,
-	scraper.modules.danbooruFetch.DanbooruFetcher,
 	scraper.modules.tbibFetch.TbibFetcher,
 	scraper.modules.xbooruFetch.XBooruFetcher,
 
@@ -42,27 +41,28 @@ class RunEngine(object):
 		self.log.info("Creating run contexts")
 
 
-		# for plugin in PLUGIN_CLASSES:
-		# 	plugin.run_scraper()
+		for plugin in PLUGIN_CLASSES:
+			instance = plugin()
+			instance.do_upsert()
 
-		threads = []
-		try:
-			for plugin in PLUGIN_CLASSES:
-				th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
-				threads.append(th)
+		# threads = []
+		# try:
+		# 	for plugin in PLUGIN_CLASSES:
+		# 		th = threading.Thread(target=plugin.run_scraper, name=plugin.loggerpath)
+		# 		threads.append(th)
 
 
-			for thread in threads:
-				thread.start()
+		# 	for thread in threads:
+		# 		thread.start()
 
-			self.log.info("Waiting for workers to complete.")
-			for thread in threads:
-				thread.join()
-		except KeyboardInterrupt:
-			self.log.info("Waiting for executor.")
-			scraper.runstate.run = False
-			for thread in threads:
-				thread.join()
+		# 	self.log.info("Waiting for workers to complete.")
+		# 	for thread in threads:
+		# 		thread.join()
+		# except KeyboardInterrupt:
+		# 	self.log.info("Waiting for executor.")
+		# 	scraper.runstate.run = False
+		# 	for thread in threads:
+		# 		thread.join()
 
 def go():
 	instance = RunEngine()

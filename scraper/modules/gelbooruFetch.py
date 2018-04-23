@@ -13,18 +13,27 @@ import scraper.runstate
 import scraper.database as db
 import scraper.fetchBase
 
-import util.WebRequest
+import WebRequest
 
 class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 
 	pluginkey         = 'Gelbooru'
 	loggerpath        = "Main.Gelbooru"
-	content_count_max = 4000000
 
 	def __init__(self):
 		super().__init__()
 
 		# db.session = db.Session()
+
+
+	def get_content_count_max(self):
+		soup = self.wg.getSoup('https://gelbooru.com/index.php?page=post&s=list&tags=all')
+
+		thumbs = soup.find_all('span', class_='thumb')
+		tids = [tmp.get("id", "").strip("s") for tmp in thumbs]
+		tids = [int(tmp) for tmp in tids if tmp]
+		maxid = max(tids)
+		return maxid
 
 	def extractTags(self, job, tagsection):
 
@@ -163,7 +172,7 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 					time.sleep(13)
 				else:
 					break
-			except util.WebRequest.WebGetException:
+			except WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching container page'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
@@ -202,7 +211,7 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 			except sqlalchemy.exc.IntegrityError:
 				err += 1
 				db.session.rollback()
-			except util.WebRequest.WebGetException:
+			except WebRequest.WebGetException:
 				job.state = 'error'
 				job.err_str = 'failure fetching actual image'
 				self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
