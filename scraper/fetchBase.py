@@ -6,6 +6,8 @@ import os
 import os.path
 import abc
 import hashlib
+import time
+import random
 import concurrent.futures
 
 import tqdm
@@ -21,7 +23,7 @@ import scraper.database as db
 
 class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
-	worker_threads = 6
+	worker_threads = 16
 
 	@abc.abstractmethod
 	def get_content_count_max(self, job):
@@ -217,9 +219,10 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 
 		executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_threads)
 		try:
-			self.log.info("Launching %s threads", self.worker_threads)
+			self.log.info("Staggered-Launching %s threads", self.worker_threads)
 			for _ in range(self.worker_threads):
 				executor.submit(self.run_worker)
+				time.sleep(random.uniform(0.2, 4.0))
 
 			self.log.info("%s threads launched, blocking while workers finish", self.worker_threads)
 			executor.shutdown()

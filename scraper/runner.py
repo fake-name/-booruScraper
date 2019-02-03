@@ -25,9 +25,8 @@ PLUGIN_CLASSES = [
 	scraper.modules.r34xxxScrape.R34xxxFetcher,
 	scraper.modules.tbibFetch.TbibFetcher,
 	scraper.modules.xbooruFetch.XBooruFetcher,
+	scraper.modules.gelbooruFetch.GelbooruFetcher,
 
-	# Fucked:
-	# scraper.modules.gelbooruFetch.GelbooruFetcher,
 ]
 
 class RunEngine(object):
@@ -59,8 +58,8 @@ class RunEngine(object):
 			for thread in threads:
 				thread.join()
 		except KeyboardInterrupt:
-			self.log.info("Waiting for executor.")
 			scraper.runstate.run = False
+			self.log.info("Waiting for threads to join.")
 			for thread in threads:
 				thread.join()
 

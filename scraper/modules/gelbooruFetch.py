@@ -35,37 +35,38 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 		maxid = max(tids)
 		return maxid
 
-	def extractTags(self, job, tagsection):
+	def extractTags(self, job, metasection):
 
-		characterlis = tagsection.find_all('li', class_='tag-type-character')
-		specieslis   = tagsection.find_all('li', class_='tag-type-species')
-		copyrlis     = tagsection.find_all('li', class_='tag-type-copyright')
-		artistlis    = tagsection.find_all('li', class_='tag-type-artist')
-		taglis       = tagsection.find_all('li', class_='tag-type-general')
+		tag_items = metasection.find_all('li', {"class" : re.compile(r'.*tag-type.*')})
 
 
 		tags = []
-		for tagli in taglis:
-			tag = tagli.find_all('a')[-1].get_text()
-			tags.append(tag)
-
-		for speciesli in specieslis:
-			tag = speciesli.find_all('a')[-1].get_text()
-			tags.append("species " + tag)
-
-		for copyrli in copyrlis:
-			tag = copyrli.find_all('a')[-1].get_text()
-			tags.append("copyright " + tag)
-
 		artists = []
-		for artistli in artistlis:
-			artist = artistli.find_all('a')[-1].get_text()
-			artists.append(artist)
-
 		characters = []
-		for characterli in characterlis:
-			character = characterli.find_all('a')[-1].get_text()
-			characters.append(character)
+
+
+		for tagli in tag_items:
+			itemtype = [tmp for tmp in tagli.get("class") if "tag-type-" in tmp][0]
+			tag_type = itemtype.split("-")[-1]
+
+			if tag_type == "artist":
+				artist = tagli.find_all('a')[-1].get_text()
+				artists.append(artist)
+
+			elif tag_type == "character":
+				character = tagli.find_all('a')[-1].get_text()
+				characters.append(character)
+
+			elif tag_type == "copyright":
+				tag = tagli.find_all('a')[-1].get_text()
+				tags.append("copyright " + tag)
+
+			elif tag_type == "general":
+				tag = tagli.find_all('a')[-1].get_text()
+				tags.append(tag)
+			else:
+				self.log.error("Unknown tag type: %s", tag_type)
+
 
 		for tag in tags:
 			if tag not in job.tags:
@@ -85,11 +86,16 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 	def extractInfo(self, job, infosection):
 
 		for li in infosection.find_all("li"):
+			if "tag-type-" in str(li.get("class")):
+				continue
+
 			rawt = li.get_text().strip()
 			if not rawt:
 				continue
 			if not ":" in rawt:
-				print("rawt: '{}'".format(rawt))
+				# print("rawt: '{}'".format(rawt))
+				continue
+
 
 			name, val = rawt.split(":", 1)
 
@@ -106,9 +112,9 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 				cal = parsedatetime.Calendar()
 				itemdate =      val.split("at")[0]
 				itemdate = itemdate.split("by")[0]
-				print("itemdate", itemdate)
+				# print("itemdate", itemdate)
 				tstruct, pstat = cal.parse(itemdate)
-				print("Ret: ", pstat, tstruct)
+				# print("Ret: ", pstat, tstruct)
 				assert pstat == 1 or pstat == 2 or pstat == 3
 				job.posted = datetime.datetime.fromtimestamp(time.mktime(tstruct))
 			elif name == 'Size':
@@ -134,12 +140,15 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 		return img['href']
 
 	def extractMeta(self, job, soup):
-		tagsection = soup.find('ul', id='tag-sidebar')
-		assert tagsection
-		infosection = soup.find('div', id='stats')
-		assert infosection
-		self.extractTags(job, tagsection)
-		self.extractInfo(job, infosection)
+		metasections = soup.find_all('div', id='searchTags')
+
+		assert metasections
+		assert len(metasections) == 1
+
+		metasection = metasections[0]
+
+		self.extractTags(job, metasection)
+		self.extractInfo(job, metasection)
 		imgurl = self.getImageUrl(soup)
 
 		return imgurl
@@ -200,6 +209,7 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 		while err < 5:
 			try:
 				imgurl = self.extractMeta(job, soup)
+
 				if imgurl:
 					self.fetchImage(job, imgurl, pageurl)
 				else:
@@ -234,22 +244,34 @@ class GelbooruFetcher(scraper.fetchBase.AbstractFetcher):
 def run(indice):
 	print("Runner {}!".format(indice))
 	fetcher = GelbooruFetcher()
-	remainingTasks = True
 
-	try:
-		while remainingTasks and scraper.runstate.run:
-			remainingTasks = fetcher.retreiveItem()
-	except KeyboardInterrupt:
-		return
-	except:
-		print("Unhandled exception!")
-		traceback.print_exc()
-		raise
+	# print("Max count: ", fetcher.get_content_count_max())
+
+
+	thing = lambda x: x
+	thing.postid = 4594444
+	thing.tags = []
+	thing.artist = []
+	thing.character = []
+
+
+	fetcher.processJob(thing)
+
+	# remainingTasks = True
+	# try:
+	# 	while remainingTasks and scraper.runstate.run:
+	# 		remainingTasks = fetcher.retreiveItem()
+	# except KeyboardInterrupt:
+	# 	return
+	# except:
+	# 	print("Unhandled exception!")
+	# 	traceback.print_exc()
+	# 	raise
 
 if __name__ == '__main__':
 
-	import logSetup
-	logSetup.initLogging()
+	import util.logSetup
+	util.logSetup.initLogging()
 
 	run(1)
 
