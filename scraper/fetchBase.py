@@ -238,3 +238,13 @@ class AbstractFetcher(object, metaclass=abc.ABCMeta):
 		print("Runner {}!".format(cls.pluginkey))
 		fetcher = cls()
 		fetcher.__go()
+
+	@classmethod
+	def run_single_thread(cls):
+		try:
+			fetcher = cls()
+			fetcher.run_worker()
+		except KeyboardInterrupt:
+			fetcher.log.info("Keyboard Interrupt!")
+			scraper.runstate.run = False
+

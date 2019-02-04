@@ -114,7 +114,7 @@ class DanbooruFetcher(scraper.fetchBase.AbstractFetcher):
 					job.state = 'removed'
 					job.err_str = 'item banned'
 					self.log.warning("Marking %s as %s (%s)", job.id, job.state, job.err_str)
-			elif name in ['Approver', 'ID', 'Source', 'Uploader']:
+			elif name in ['Approver', 'ID', 'Source', 'Uploader', 'Top Tagger']:
 				pass
 			else:
 				self.log.warning("Unknown item key-value:")

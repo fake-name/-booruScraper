@@ -2,6 +2,7 @@ import logging
 
 import threading
 import multiprocessing
+import concurrent.futures
 
 import scraper.database as db
 import scraper.runstate
@@ -36,13 +37,13 @@ class RunEngine(object):
 	def run(self):
 		self.log.info("Inserting start URLs")
 
+		for plugin in PLUGIN_CLASSES:
+			instance = plugin()
+			instance.do_upsert()
 
 		self.log.info("Creating run contexts")
 
 
-		for plugin in PLUGIN_CLASSES:
-			instance = plugin()
-			instance.do_upsert()
 
 		threads = []
 		try:
@@ -63,7 +64,53 @@ class RunEngine(object):
 			for thread in threads:
 				thread.join()
 
+
+	def run_sequential(self):
+		self.log.info("Inserting start URLs")
+
+		for plugin in PLUGIN_CLASSES:
+			instance = plugin()
+			instance.do_upsert()
+
+
+		self.log.info("Doing sequential execution")
+
+
+		try:
+			for plugin in PLUGIN_CLASSES:
+				plugin.run_scraper()
+
+		except KeyboardInterrupt:
+			scraper.runstate.run = False
+			self.log.info("Waiting for threads to join.")
+
+	def run_shared_pool(self):
+		self.log.info("Inserting start URLs")
+
+		for plugin in PLUGIN_CLASSES:
+			instance = plugin()
+			instance.do_upsert()
+
+
+		self.log.info("Doing sequential execution")
+
+		worker_threads = db.DB_CONNECTION_POOL_SIZE * 2
+
+		executor = concurrent.futures.ThreadPoolExecutor(max_workers=db.DB_CONNECTION_POOL_SIZE)
+		try:
+			self.log.info("Staggered-Launching %s threads", worker_threads)
+
+			for plugin in PLUGIN_CLASSES:
+				for _ in range(db.DB_CONNECTION_POOL_SIZE // 2):
+					executor.submit(plugin.run_single_thread)
+
+		except KeyboardInterrupt:
+			scraper.runstate.run = False
+			self.log.info("Waiting for threads to join.")
+
 def go():
 	instance = RunEngine()
-	instance.run()
+	# instance.run()
+	# instance.run_sequential()
+	instance.run_shared_pool()
 
