@@ -24,3 +24,6 @@ Potential ideas:
 	 - http://e-shuushuu.net/
 	 - https://chan.sankakucomplex.com/
 	 - http://paheal.net/
+
+Note: There is a pre-available Danbooru-specific archive available in various formats here: https://www.gwern.net/Danbooru2019
+This may be relevant if you're just looking for a easily-available dataset.
